@@ -30,6 +30,7 @@ class Operation
   public:
     Operation();
     void setLight(int value);
+    void setFan(int value);
     int getFanSpeed();
     void setFanSpeed(int mode);
     void pushOnButton(int pushTime);

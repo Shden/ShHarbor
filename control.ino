@@ -10,10 +10,10 @@ Control::Control()
   pinMode(CONTROL_S3_LED, OUTPUT);
 }
 
-// On button check & handle
 int Control::getOnButtonPressed()
 {
-  int buttonPressed = 0;
+  return digitalRead(CONTROL_ON);
+  /*int buttonPressed = 0;
   int onReading = digitalRead(CONTROL_ON);
   if (onReading != lastOnReading)
   {
@@ -31,7 +31,7 @@ int Control::getOnButtonPressed()
     onPressedShort = LOW == onReading;
   } 
     
-  if (millis() - onLastPressTime > LONG_PUSH)
+  if (millis() - onLastPressTime > LONG_PUSH/4)
   {
     if (!onPressedLong)
     {
@@ -42,7 +42,7 @@ int Control::getOnButtonPressed()
     }
   }
   lastOnReading = onReading;
-  return buttonPressed;
+  return buttonPressed;*/
 }
 
 int Control::getLightButtonPressed()
@@ -62,9 +62,6 @@ void Control::displayMode(int mode)
   digitalWrite(CONTROL_S1_LED, (mode & 0x01) ? HIGH : LOW);
   digitalWrite(CONTROL_S2_LED, (mode & 0x02) ? HIGH : LOW);
   digitalWrite(CONTROL_S3_LED, (mode & 0x04) ? HIGH : LOW);
-  Serial.print("Display set to: ");
-  Serial.print(mode);
-  Serial.println(" value.");
 }
 
 
