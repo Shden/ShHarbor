@@ -8,25 +8,24 @@
 #define CONTROL_S2_LED   5
 #define CONTROL_S3_LED   6
 
-// Push button times:
+// Push button times
 enum
 { 
   LONG_PUSH = 2000,
-  QUICK_PUSH = 200,
-  DEBOUNCE = 25
+  QUICK_PUSH = 100
 };
 
 class Control
 {
   public:
     Control();
-    int getOnButtonPressed();
-    int getLightButtonPressed();
+    int getOnButtonSignal();
+    int getLightButtonSignal();
     void displayMode(int mode);
-  /*private:
-    bool onPressedShort = false, onPressedLong = false;
-    long onLastPressTime = 0;
-    int lastOnReading = HIGH;*/
+    int getOnPressed();
+  private:
+    long lastOnPush = 0;
+    int lastOnState = HIGH;
 };
 
 #endif

@@ -19,6 +19,13 @@ void AsyncDSM501::update()
     getLowRatio(0);
     getLowRatio(1);
     
+    Serial.print("AQU update: ");
+    Serial.print(getParticalWeight(0));
+    Serial.print(" ");
+    Serial.print(getParticalWeight(1));
+    Serial.print(" ");
+    Serial.println(getAQI());
+    
     // reset the timer for the new lap
     _timer = millis();
   }
@@ -30,7 +37,7 @@ void AsyncDSM501::update()
 
 void AsyncDSM501::begin()
 {
-  DSM501::begin(MIN_WIN_SPAN);
+  DSM501::begin(MIN_WIN_SPAN * 2);
 }
 
 

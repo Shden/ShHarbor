@@ -12,18 +12,18 @@ Operation::Operation()
   digitalWrite(OPERATION_ON, HIGH);
 }
 
-void Operation::setLight(int value)
+void Operation::setLightSignal(int value)
 {
   digitalWrite(OPERATION_LIGHT, value);
 }
 
-void Operation::setFan(int value)
+void Operation::setFanSignal(int value)
 {
   digitalWrite(OPERATION_ON, value);
 }
 
 // Gets current fan status from operation module
-int Operation::getFanSpeed()
+int Operation::getFanState()
 {
   int s1 = digitalRead(OPERATION_S1);
   int s2 = digitalRead(OPERATION_S2);
@@ -49,10 +49,10 @@ int Operation::getFanSpeed()
 }
 
 // Sets fan speed, turns on or off
-void Operation::setFanSpeed(int mode)
+void Operation::setFanState(int mode)
 {
   // Shutting down the fan
-  if (mode == FAN_OFF && getFanSpeed() != FAN_OFF)
+  if (mode == FAN_OFF && getFanState() != FAN_OFF)
   {
     Serial.println("Turning fan off...");
     pushOnButton(LONG_PUSH);
@@ -62,26 +62,17 @@ void Operation::setFanSpeed(int mode)
   
   else if (FAN_S1 == mode || FAN_S2 == mode || FAN_S3 == mode)
   {
-    // Check if needed to turn on first
-    /*if (getFanSpeed() == FAN_OFF)
-    {
-      Serial.println("Turning fan on...");
-      pushOnButton(LONG_PUSH);
-      Serial.println("Fan is now on.");
-      return;
-    }*/
-      
-    // And adjust the speed cycle
+    // Adjust the speed cycle
     for (int i=0; i<3; i++)
-      if (getFanSpeed() != mode)
+      if (getFanState() != mode)
       {
-        pushOnButton(QUICK_PUSH);
-        delay(QUICK_PUSH);
+        pushOnButton(200);
+        delay(200);
       }
       else break;
       
-    Serial.print("Fan speed is set to: ");
-    Serial.println(getFanSpeed());
+    //Serial.print("Fan speed now: ");
+    //Serial.println(getFanState());
     return;
   }
 }

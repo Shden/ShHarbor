@@ -11,11 +11,11 @@
 // Possible fan operation states:
 enum 
 {
-  FAN_OFF = 0x00,  // Fan is off
-  FAN_S1 = 0x01,   // low speed    
-  FAN_S2 = 0x02,   // medium speed
-  FAN_S3 = 0x04,   // high speed
-  FAN_AUTO = 0x07  // Fan speed depending on air particle density (auto mode)
+  FAN_OFF   = 0, // Fan is off
+  FAN_S1    = 1, // low speed (manual)  
+  FAN_S2    = 2, // medium speed (manual)
+  FAN_S3    = 4, // high speed (manual)
+  FAN_AUTO  = 7  // Fan speed depending on air particle density (auto)
 };
 
 // Possible light states:
@@ -29,10 +29,10 @@ class Operation
 {
   public:
     Operation();
-    void setLight(int value);
-    void setFan(int value);
-    int getFanSpeed();
-    void setFanSpeed(int mode);
+    void setLightSignal(int value);
+    void setFanSignal(int value);
+    int getFanState();
+    void setFanState(int mode);
     void pushOnButton(int pushTime);
 };
 

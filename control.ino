@@ -10,42 +10,14 @@ Control::Control()
   pinMode(CONTROL_S3_LED, OUTPUT);
 }
 
-int Control::getOnButtonPressed()
+// Returns momentary signal from On input
+int Control::getOnButtonSignal()
 {
   return digitalRead(CONTROL_ON);
-  /*int buttonPressed = 0;
-  int onReading = digitalRead(CONTROL_ON);
-  if (onReading != lastOnReading)
-  {
-    if (onPressedShort && !onPressedLong)
-      // short pressed
-      buttonPressed = QUICK_PUSH;
-      //promoteFanMode();
-      
-    onPressedShort = onPressedLong = false;  
-    onLastPressTime = millis(); 
-  }
-   
-  if (millis() - onLastPressTime > DEBOUNCE)
-  {
-    onPressedShort = LOW == onReading;
-  } 
-    
-  if (millis() - onLastPressTime > LONG_PUSH/4)
-  {
-    if (!onPressedLong)
-    {
-      onPressedLong = LOW == onReading;
-      if (onPressedLong)
-        buttonPressed = LONG_PUSH;
-        //pushOnButton(LONG_PUSH);
-    }
-  }
-  lastOnReading = onReading;
-  return buttonPressed;*/
 }
 
-int Control::getLightButtonPressed()
+// Retruns momentart signal from Light input
+int Control::getLightButtonSignal()
 {
   return digitalRead(CONTROL_LIGHT);
 }
@@ -62,6 +34,41 @@ void Control::displayMode(int mode)
   digitalWrite(CONTROL_S1_LED, (mode & 0x01) ? HIGH : LOW);
   digitalWrite(CONTROL_S2_LED, (mode & 0x02) ? HIGH : LOW);
   digitalWrite(CONTROL_S3_LED, (mode & 0x04) ? HIGH : LOW);
+}
+
+// Monitors On pressed by times
+int Control::getOnPressed()
+{
+  const int onState = getOnButtonSignal();
+
+  // if nothng changed, just return
+  if (lastOnState == onState)
+    return 0;
+  
+  // if button just pressed, remember the time and return
+  if (onState == LOW)
+  {
+    lastOnPush = millis();
+    lastOnState = onState;
+    return 0;
+  }
+  
+  // if button released, check the timing
+  if (onState == HIGH)
+  {
+    int res = 0;
+    if (millis() - lastOnPush > LONG_PUSH)
+      res = LONG_PUSH;
+    else if (millis() - lastOnPush > QUICK_PUSH)
+      res = QUICK_PUSH;
+      
+    lastOnPush = millis();
+    lastOnState = onState;
+
+    return res;
+  }
+  
+  return 0;
 }
 
 

@@ -5,11 +5,11 @@
 
 #define NO__DEBUG__NO
 
+int controllerState;
+
 AsyncDSM501 Sensor;
 Control ControlPanel;
 Operation OperationModule;
-
-int fanControlMode = FAN_OFF;
 
 void setup() 
 {
@@ -18,10 +18,9 @@ void setup()
 
   // Initialize DSM501
   Sensor.begin();
-  
-  fanControlMode = FAN_AUTO;
-  
-  Serial.println("Initialization completed.");
+
+  // Get the current state from operation module as a starting point
+  controllerState = OperationModule.getFanState();  
 }
 
 // The main loop.
@@ -44,113 +43,101 @@ void loop()
   delay(2000);
 
   Serial.println("Setting fan to S1");
-  setFanSpeed(FAN_S1);
+  setFanState(FAN_S1);
   delay(2000);
 
   Serial.println("Setting fan to S2");
-  setFanSpeed(FAN_S2);
+  setFanState(FAN_S2);
   delay(2000);
 
   Serial.println("Setting fan to S3");
-  setFanSpeed(FAN_S3);
+  setFanState(FAN_S3);
   delay(2000);
 
   Serial.println("Turning fan OFF");
-  setFanSpeed(FAN_OFF);
+  setFanState(FAN_OFF);
   
   return;
   #endif
   /// <--- debug stug code end
   
-  /*switch(ControlPanel.getOnButtonPressed())
-  {
-    case QUICK_PUSH:
-          promoteFanMode();
-          break;
-    case LONG_PUSH:
-          OperationModule.pushOnButton(LONG_PUSH);
-          ControlPanel.displayMode(OperationModule.getFanSpeed());
-          break;
-  }*/
+  // just mirror buttons signal level from the control module to the operation module
+  OperationModule.setLightSignal(ControlPanel.getLightButtonSignal());
+  OperationModule.setFanSignal(ControlPanel.getOnButtonSignal());
   
-  // just mirror the light signal from the control module to the operation module
-  OperationModule.setLight(ControlPanel.getLightButtonPressed());
-  OperationModule.setFan(ControlPanel.getOnButtonPressed());
-  
-  if (ControlPanel.getOnButtonPressed())
+  // if operation is OFF, controller does the same
+  if (OperationModule.getFanState() == FAN_OFF && controllerState != FAN_AUTO)
   {
-    if (fanControlMode != FAN_AUTO)
+    for (int i=0; i<50; i++)
     {
-      if (FAN_S3 == fanControlMode && FAN_S1 == OperationModule.getFanSpeed())
-      {
-        Serial.println("Enter auto mode.");
-        fanControlMode = FAN_AUTO;
-      }
-      else
-      {
-        fanControlMode = OperationModule.getFanSpeed();
-      }
+      delay(5);
+      if (OperationModule.getFanState() != FAN_OFF)
+        return;
     }
-    else 
-    {
-      if (FAN_S1 != OperationModule.getFanSpeed())
-      {
-        Serial.println("Leave auto mode.");
-        fanControlMode = OperationModule.getFanSpeed();
-      }
-    }
+    controllerState = FAN_OFF;  
   }
   
-  // display current mode
-  ControlPanel.displayMode(fanControlMode);
+  if (controllerState == FAN_S1 || controllerState == FAN_S2 || controllerState == FAN_S3)
+    if (OperationModule.getFanState() != controllerState)
+    {
+      for (int i=0; i<50; i++)
+      {
+        delay(5);
+        if (OperationModule.getFanState() == controllerState)
+          return;
+      }
+      OperationModule.setFanState(controllerState);
+    }
+    
+  // update controller state
+  if (ControlPanel.getOnPressed() == QUICK_PUSH)
+  {
+    // let everything settle
+    delay(500);
+    
+    Serial.print("Changing controller state from: ");
+    Serial.print(controllerState);
+    switch(controllerState)
+    {
+      case FAN_OFF:
+        Serial.println(" to: S1.");
+        controllerState = FAN_S1;
+        break;      
+      case FAN_S1:
+        Serial.println(" to: S2.");
+        controllerState = FAN_S2;
+        break;      
+      case FAN_S2:
+        Serial.println(" to: S3.");
+        controllerState = FAN_S3;
+        break;     
+      case FAN_S3:
+        Serial.println(" to AUTO mode.");
+        controllerState = FAN_AUTO;
+        break;
+      case FAN_AUTO:
+        Serial.println(" now leaving AUTO mode, change speed to S1.");
+        controllerState = FAN_S1;
+        OperationModule.setFanState(controllerState);
+        break;
+    }
+  }
+
+  // display the current *controller* mode (not the operation module state!)
+  ControlPanel.displayMode(controllerState);
   
   // non-blocking particles concentration update
   Sensor.update();
   
   // the fan control itself:
-  if (!ControlPanel.getOnButtonPressed())
+  if (controllerState == FAN_AUTO)
   {
-  if (FAN_AUTO == fanControlMode)
-  {
-    int currentFanSpeed = OperationModule.getFanSpeed();
-    int AQI = 162;//Sensor.getAQI() * 0; /// debug!!!
-         if (AQI > 240 && FAN_S3 != currentFanSpeed) OperationModule.setFanSpeed(FAN_S3);
-    else if (AQI > 160 && FAN_S2 != currentFanSpeed) OperationModule.setFanSpeed(FAN_S2);
-    else if (AQI > 80  && FAN_S1 != currentFanSpeed) OperationModule.setFanSpeed(FAN_S1);
-    else if (FAN_OFF != currentFanSpeed) OperationModule.setFanSpeed(FAN_OFF);
-  }
+    int AQI = Sensor.getAQI();
+         if (AQI > 360) OperationModule.setFanState(FAN_S3);
+    else if (AQI > 280) OperationModule.setFanState(FAN_S2);
+    else if (AQI > 200) OperationModule.setFanState(FAN_S1);
+    else OperationModule.setFanState(FAN_OFF);
   }
 }
-
-// Cyclic promotion of the fan mode S1 -> S2 -> S3 -> AUTO -> S1 etc.
-/*void promoteFanMode()
-{
-  switch(fanControlMode)
-  {
-    case FAN_S1:
-      fanControlMode = FAN_S2;
-      setFanSpeed(fanControlMode);
-      break;
-    case FAN_S2:
-      fanControlMode = FAN_S3;
-      setFanSpeed(fanControlMode);
-      break;
-    case FAN_S3:
-      fanControlMode = FAN_AUTO;
-      ControlPanel.displayMode(fanControlMode);
-      break;
-    case FAN_AUTO:
-      fanControlMode = FAN_S1;
-      setFanSpeed(fanControlMode);
-      break;
-  }
-}*/
-
-// Sets fan speed, turns on or off + updates display
-/*void setFanSpeed(int mode)
-{
-  OperationModule.setFanSpeed(mode);
-  ControlPanel.displayMode(mode);
-}*/
 
 

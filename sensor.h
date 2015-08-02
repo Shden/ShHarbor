@@ -13,7 +13,7 @@ class AsyncDSM501 : public DSM501
     AsyncDSM501();
     void begin();
     void update();
-    float getParticalWeight(int i);
+    //float getParticalWeight(int i);
   private:
     uint32_t _timer;
 };
