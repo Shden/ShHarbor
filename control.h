@@ -1,3 +1,5 @@
+#include "operation.h"
+
 #ifndef CONTROL_H
 #define CONTROL_H
 
@@ -21,7 +23,7 @@ class Control
     Control();
     int getOnButtonSignal();
     int getLightButtonSignal();
-    void displayMode(int mode);
+    void displayMode(OperationStatus mode);
     int getOnPressed();
   private:
     long lastOnPush = 0;

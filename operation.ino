@@ -51,29 +51,32 @@ int Operation::getFanState()
 // Sets fan speed, turns on or off
 void Operation::setFanState(int mode)
 {
-  // Shutting down the fan
-  if (mode == FAN_OFF && getFanState() != FAN_OFF)
+  if (getFanState() != mode)
   {
-    Serial.println("Turning fan off...");
-    pushOnButton(LONG_PUSH);
-    Serial.println("Fan is off now.");
-    return;
-  }
+    // Shutting down the fan
+    if (mode == FAN_OFF)
+    {
+      Serial.println("Turning fan off...");
+      pushOnButton(LONG_PUSH);
+      Serial.println("Fan is off now.");
+      return;
+    }
   
-  else if (FAN_S1 == mode || FAN_S2 == mode || FAN_S3 == mode)
-  {
-    // Adjust the speed cycle
-    for (int i=0; i<3; i++)
-      if (getFanState() != mode)
-      {
-        pushOnButton(200);
-        delay(200);
-      }
-      else break;
+    else if (FAN_S1 == mode || FAN_S2 == mode || FAN_S3 == mode)
+    {
+      // Adjust the speed cycle
+      for (int i=0; i<3; i++)
+        if (getFanState() != mode)
+        {
+          pushOnButton(200);
+          delay(500);
+        }
+        else break;
       
-    //Serial.print("Fan speed now: ");
-    //Serial.println(getFanState());
-    return;
+      //Serial.print("Fan speed now: ");
+      //Serial.println(getFanState());
+      return;
+    }
   }
 }
  

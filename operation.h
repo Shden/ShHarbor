@@ -14,8 +14,13 @@ enum
   FAN_OFF   = 0, // Fan is off
   FAN_S1    = 1, // low speed (manual)  
   FAN_S2    = 2, // medium speed (manual)
-  FAN_S3    = 4, // high speed (manual)
-  FAN_AUTO  = 7  // Fan speed depending on air particle density (auto)
+  FAN_S3    = 4  // high speed (manual)
+};
+
+struct OperationStatus
+{
+  unsigned char speed : 3;  // FAN_OFF (0) or FAN_S1 (1) or FAN_S2 (2) or FAN_S3 (4)
+  unsigned char autoMode : 1;   // 0 for manual mode, 1 for auto mode (driven by air particle density).
 };
 
 // Possible light states:

@@ -19,7 +19,7 @@ void AsyncDSM501::update()
     getLowRatio(0);
     getLowRatio(1);
     
-    Serial.print("AQU update: ");
+    Serial.print("AQI update: ");
     Serial.print(getParticalWeight(0));
     Serial.print(" ");
     Serial.print(getParticalWeight(1));
@@ -37,7 +37,7 @@ void AsyncDSM501::update()
 
 void AsyncDSM501::begin()
 {
-  DSM501::begin(MIN_WIN_SPAN * 2);
+  DSM501::begin(MIN_WIN_SPAN*2);
 }
 
 

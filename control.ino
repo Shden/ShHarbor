@@ -22,18 +22,25 @@ int Control::getLightButtonSignal()
   return digitalRead(CONTROL_LIGHT);
 }
 
-/* Updates control module LEDs to display the current mode.
-   Possible modes: OFF - all LEDs off
-                   S1 - 1st LED on
-                   S2 - 2nd LED on
-                   S3 - 3rd LED on 
-                   AUTO - all LEDs on 
- */
-void Control::displayMode(int mode)
+/* Updates control module LEDs to display the current mode. */
+void Control::displayMode(OperationStatus mode)
 {
-  digitalWrite(CONTROL_S1_LED, (mode & 0x01) ? HIGH : LOW);
-  digitalWrite(CONTROL_S2_LED, (mode & 0x02) ? HIGH : LOW);
-  digitalWrite(CONTROL_S3_LED, (mode & 0x04) ? HIGH : LOW);
+  // Auto mode flash indication
+  if (mode.autoMode)
+  {
+    int wheel = millis() % 5000; // each 5 seconds
+    if (wheel < 600)
+    {
+      if (wheel < 200) displayMode({FAN_S1});
+      else if (wheel < 400) displayMode({FAN_S2});
+      else displayMode({FAN_S3});
+      return;
+    }
+  }
+  
+  digitalWrite(CONTROL_S1_LED, (mode.speed & 0x01) ? HIGH : LOW);
+  digitalWrite(CONTROL_S2_LED, (mode.speed & 0x02) ? HIGH : LOW);
+  digitalWrite(CONTROL_S3_LED, (mode.speed & 0x04) ? HIGH : LOW);
 }
 
 // Monitors On pressed by times
