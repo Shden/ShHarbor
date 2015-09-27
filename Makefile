@@ -4,7 +4,8 @@ CXXFLAGS_STD      = -std=gnu++11
 
 BOARD_TAG = nano
 MCU = atmega328p
-ISP_PORT = /dev/ttyACM*
+ISP_PORT = /dev/cu.usbserial
+AVRDUDE_ARD_BAUDRATE = 57600
 
 include $(ARDMK_DIR)/Arduino.mk
 

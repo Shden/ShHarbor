@@ -4,14 +4,18 @@
 #define CONTROL_H
 
 // these pins go to the control panel of the hood:
-#define CONTROL_ON 8
-#define CONTROL_LIGHT 7
-#define CONTROL_S1_LED 4
-#define CONTROL_S2_LED 5
-#define CONTROL_S3_LED 6
+#define CONTROL_ON 	8
+#define CONTROL_LIGHT 	7
+#define CONTROL_S1_LED 	4
+#define CONTROL_S2_LED 	5
+#define CONTROL_S3_LED 	6
 
 // Push button times
-enum { LONG_PUSH = 2000, QUICK_PUSH = 100 };
+enum 
+{ 
+	LONG_PUSH = 2000, 
+	QUICK_PUSH = 100 
+};
 
 class Control {
 public:
