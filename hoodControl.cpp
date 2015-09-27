@@ -6,7 +6,7 @@
 #define PARTICLES_10 2
 #define PARTICLES_25 3
 
-#define SPAN_TIME 30000 // 30 sec time span to measure air quality
+#define SPAN_TIME 30000.0 // 45 sec time span to measure air quality
 
 #define NO__DEBUG__NO
 
@@ -37,9 +37,10 @@ void particlesHandler(int idx, int signal)
 
 	if (millis() - spanStart > SPAN_TIME) 
 	{
+
 		// tlow in microseconds so div 1000 mul 100 = div 10
-		lowRatio[0] = tlow[0] / 10.0 / SPAN_TIME;
-		lowRatio[1] = tlow[1] / 10.0 / SPAN_TIME;
+		lowRatio[0] = tlow[0] / SPAN_TIME / 10.0;
+		lowRatio[1] = tlow[1] / SPAN_TIME / 10.0;
 
 		spanStart = millis();
 		tlow[0] = tlow[1] = 0;
@@ -57,6 +58,7 @@ void setup()
 {
 	// for debug output
 	Serial.begin(9600);
+	Serial.println("Initialization.");
 
 	// Initialize DSM501 pins & attach interrupt handlers
 	pinMode(PARTICLES_10, INPUT);
@@ -120,31 +122,34 @@ int speedSelect(int currentAQI, int currentSpeed)
   const int AQB[] = { 500, 1000, 1500 };
   const int H = 20;
 
-  switch (currentSpeed) 
-  {
-		case FAN_OFF:
-			if (currentAQI > AQB[0] + H)
-				return FAN_S1;
-			break;
+	if (currentAQI > 0)
+	{
+	  switch (currentSpeed) 
+	  {
+			case FAN_OFF:
+				if (currentAQI > AQB[0] + H)
+					return FAN_S1;
+				break;
 
-		case FAN_S1:
-			if (currentAQI > AQB[1] + H)
-				return FAN_S2;
-			if (currentAQI < AQB[0] - H)
-				return FAN_OFF;
-			break;
+			case FAN_S1:
+				if (currentAQI > AQB[1] + H)
+					return FAN_S2;
+				if (currentAQI < AQB[0] - H)
+					return FAN_OFF;
+				break;
 
-		case FAN_S2:
-			if (currentAQI > AQB[2] + H)
-				return FAN_S3;
-			if (currentAQI < AQB[1] - H)
-				return FAN_S1;
-			break;
-		case FAN_S3:
-			if (currentAQI < AQB[2] - H)
-				return FAN_S2;
-			break;
-  }
+			case FAN_S2:
+				if (currentAQI > AQB[2] + H)
+					return FAN_S3;
+				if (currentAQI < AQB[1] - H)
+					return FAN_S1;
+				break;
+			case FAN_S3:
+				if (currentAQI < AQB[2] - H)
+					return FAN_S2;
+				break;
+	  }
+	}
   return currentSpeed;
 }
 

@@ -2,7 +2,8 @@
 #include "control.h"
 #include "Arduino.h"
 
-Operation::Operation() {
+Operation::Operation() 
+{
   // initialize operation-side pins:
   pinMode(OPERATION_ON, OUTPUT);
   pinMode(OPERATION_LIGHT, OUTPUT);
@@ -13,14 +14,16 @@ Operation::Operation() {
   digitalWrite(OPERATION_ON, HIGH);
 }
 
-void Operation::setLightSignal(int value) {
+void Operation::setLightSignal(int value) 
+{
   digitalWrite(OPERATION_LIGHT, value);
 }
 
 void Operation::setFanSignal(int value) { digitalWrite(OPERATION_ON, value); }
 
 // Gets current fan status from operation module
-int Operation::getFanState() {
+int Operation::getFanState() 
+{
   int s1 = digitalRead(OPERATION_S1);
   int s2 = digitalRead(OPERATION_S2);
   int s3 = digitalRead(OPERATION_S3);
@@ -45,23 +48,29 @@ int Operation::getFanState() {
 }
 
 // Sets fan speed, turns on or off
-void Operation::setFanState(int mode) {
-  if (getFanState() != mode) {
+void Operation::setFanState(int mode) 
+{
+  if (getFanState() != mode) 
+	{
     // Shutting down the fan
-    if (mode == FAN_OFF) {
+    if (mode == FAN_OFF) 
+		{
       Serial.println("Turning fan off...");
       pushOnButton(LONG_PUSH);
       Serial.println("Fan is off now.");
       return;
     }
 
-    else if (FAN_S1 == mode || FAN_S2 == mode || FAN_S3 == mode) {
+    else if (FAN_S1 == mode || FAN_S2 == mode || FAN_S3 == mode) 
+		{
       // Adjust the speed cycle
       for (int i = 0; i < 3; i++)
-        if (getFanState() != mode) {
+        if (getFanState() != mode) 
+				{
           pushOnButton(200);
           delay(500);
-        } else
+        } 
+				else
           break;
 
       // Serial.print("Fan speed now: ");
@@ -72,7 +81,8 @@ void Operation::setFanState(int mode) {
 }
 
 // Push on button for a certain time (ms)
-void Operation::pushOnButton(int pushTime) {
+void Operation::pushOnButton(int pushTime) 
+{
   digitalWrite(OPERATION_ON, LOW);
   delay(pushTime);
   digitalWrite(OPERATION_ON, HIGH);
