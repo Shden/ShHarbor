@@ -19,15 +19,15 @@ enum
 
 class Control {
 public:
-  Control();
-  int getOnButtonSignal();
-  int getLightButtonSignal();
-  void displayMode(ControllerStatus mode);
-  int getOnPressed();
+	Control();
+	int getOnButtonSignal();
+	int getLightButtonSignal();
+	void displayMode(ControllerStatus mode);
+	int getOnPressed();
 
 private:
-  long lastOnPush = 0;
-  int lastOnState;
+	long lastOnPush = 0;
+	int lastOnState;
 };
 
 #endif

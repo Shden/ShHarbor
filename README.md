@@ -4,5 +4,7 @@ The idea is to use DSM501 dust particles sensor to constantly monitor the air qu
 Then, based on the sensor data the Arduino Nano controller will turn the hood fan to an appropriate
 speed until the air got clean and fresh.
 
-A good lib for DSM501 is available: https://github.com/richardhmm/DIYRepo/tree/master/arduino/libraries.
+An idea of the code for DSM501 is from: https://github.com/richardhmm/DIYRepo/tree/master/arduino/libraries.
+
+Schematics: https://github.com/Shden/ShHarbor/blob/master/docs/schematics.pdf.
 
