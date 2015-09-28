@@ -19,18 +19,18 @@ Schematics: https://github.com/Shden/ShHarbor/blob/master/docs/schematics.pdf.
 #define PARTICLES_10 2
 #define PARTICLES_25 3
 
-#define SPAN_TIME 30000.0 						// 30 sec time span to measure air quality
+#define SPAN_TIME 30000.0 			// 30 sec time span to measure air quality
 
 #define NO__DEBUG__NO
 
 // Global data used by the controller. At least keep this in one struct.
 struct ControllerData
 {
-	ControllerStatus controllerState;		// Keeps the current state of the controller.
-	Control controlPanel;								// This is the front panel representation.
-	Operation operationModule;					// This is under the hood operation module representation.
+	ControllerStatus controllerState;	// Keeps the current state of the controller.
+	Control controlPanel;			// This is the front panel representation.
+	Operation operationModule;		// This is under the hood operation module representation.
 
-	volatile uint32_t tn[2];						// These weird stuff is for dust counting.
+	volatile uint32_t tn[2];		// These weird stuff is for dust counting.
 	volatile uint32_t tlow[2];
 	volatile float lowRatio[2];
 	volatile uint32_t spanStart;
@@ -84,8 +84,8 @@ uint32_t getAQI()
 /* 
 	Interrupt handler for both particles channels.
 
- 		idx: channel number as follows: 0 for PARTICLES_10, 1 for PARTICLES_25 
-		signal: current pin signal value
+	idx: channel number as follows: 0 for PARTICLES_10, 1 for PARTICLES_25 
+	signal: current pin signal value
 */
 void particlesHandler(int idx, int signal) 
 {
@@ -156,8 +156,8 @@ int speedSelect(int currentAQI, int currentSpeed)
 
 	if (currentAQI > 0)
 	{
-	  switch (currentSpeed) 
-	  {
+		switch (currentSpeed) 
+		{
 			case FAN_OFF:
 				if (currentAQI > AQB[0] + H)
 					return FAN_S1;
@@ -180,7 +180,7 @@ int speedSelect(int currentAQI, int currentSpeed)
 				if (currentAQI < AQB[2] - H)
 					return FAN_S2;
 				break;
-	  }
+		}
 	}
 	return currentSpeed;
 }
@@ -249,13 +249,13 @@ void loop()
 	// update controller state
 	if (gd->controlPanel.getOnPressed() == QUICK_PUSH) 
 	{
-	    // let everything settle
-	    delay(500);
+		// let everything settle
+		delay(500);
 
-	    Serial.print("Changing controller state from: ");
-	    Serial.print(gd->controllerState.speed);
+		Serial.print("Changing controller state from: ");
+		Serial.print(gd->controllerState.speed);
 
-	    if (!gd->controllerState.autoMode) 
+		if (!gd->controllerState.autoMode) 
 		{
 			// ...in the manual mode:
 			switch (gd->controllerState.speed) 
@@ -277,7 +277,7 @@ void loop()
 					gd->controllerState.autoMode = 1;
 					break;
 			}
-	    } 
+		} 
 		else 
 		{
 			// ... in the auto mode and ON is already released
