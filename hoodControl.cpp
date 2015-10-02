@@ -19,7 +19,8 @@ Schematics: https://github.com/Shden/ShHarbor/blob/master/docs/schematics.pdf.
 #define PARTICLES_10 2
 #define PARTICLES_25 3
 
-#define SPAN_TIME 30000.0 			// 30 sec time span to measure air quality
+#define SPAN_TIME 60000.0 			// 30 sec time span to measure air quality
+#define HC_BUILD "1.0.0"
 
 #define NO__DEBUG__NO
 
@@ -132,6 +133,8 @@ void setup()
 
 	// for debug output
 	Serial.begin(9600);
+	Serial.print("Hood control build: ");
+	Serial.println(HC_BUILD);
 	Serial.println("Initialization.");
 
 	// Initialize DSM501 pins & attach interrupt handlers
