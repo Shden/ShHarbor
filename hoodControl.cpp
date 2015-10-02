@@ -20,7 +20,7 @@ Schematics: https://github.com/Shden/ShHarbor/blob/master/docs/schematics.pdf.
 #define PARTICLES_25 3
 
 #define SPAN_TIME 60000.0 			// 30 sec time span to measure air quality
-#define HC_BUILD "1.0.0"
+#define HC_BUILD "1.0.1"
 
 #define NO__DEBUG__NO
 
@@ -115,7 +115,12 @@ void particlesHandler(int idx, int signal)
 		gd->tlow[0] = gd->tlow[1] = 0;
 
 		Serial.print("AQI update: ");
-		Serial.println(getAQI());
+		Serial.print(getAQI());
+		Serial.print("\tw(0): ");
+		Serial.print(getParticalWeight(0));
+		Serial.print("\tw(1)");
+		Serial.println(getParticalWeight(1));
+		
 	}
 }
 
@@ -148,14 +153,14 @@ void setup()
 
 	// Get the current controller state from operation module as a starting point
 	gd->controllerState.speed = gd->operationModule.getFanState();
-	gd->controllerState.autoMode = 0;
+	gd->controllerState.autoMode = 1;
 }
 
 // Select the fan speed based on air quality with histeresis.
 int speedSelect(int currentAQI, int currentSpeed) 
 {
-	const int AQB[] = { 500, 1000, 1500 };
-	const int H = 20;
+	const int AQB[] = { 500, 1000, 2000 };
+	const int H = 100;
 
 	if (currentAQI > 0)
 	{
