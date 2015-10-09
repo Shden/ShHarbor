@@ -6,5 +6,5 @@ speed until the air got clean and fresh.
 
 An idea of the code for DSM501 is from: https://github.com/richardhmm/DIYRepo/tree/master/arduino/libraries.
 
-Schematics: https://github.com/Shden/ShHarbor/blob/master/docs/schematics.pdf.
+Schematics: https://github.com/Shden/ShHarbor/blob/master/hoodControl/docs/schematics.pdf.
 
