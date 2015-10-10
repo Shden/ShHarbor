@@ -165,17 +165,6 @@ void setup()
 	gd->controllerState.autoMode = 1;
 }
 
-// Temperature adjustment for speed. The idea is if temperature is above some threshold value,
-// fan should start at S1 regardless to the air quality. This is a 'private' method to use from 
-// speedSelect(...) only.
-int tempAdjust(int speed, float temperature)
-{
-	if (temperature > TEMP_THRESHOLD_FAN_ON && FAN_OFF == speed)
-		return FAN_S1;
-	else
-		return speed;
-}
-
 // Select the fan speed based on air quality and temperature with histeresis.
 //	@currentAQI - current air quialily from DSM501
 //	@currentTemp - temperature from DS1820
@@ -184,6 +173,7 @@ int speedSelect(int currentAQI, float currentTemp, int currentSpeed)
 {
 	const int AQB[] = { 500, 1000, 2800 };
 	const int H = 100;
+	const float hist = 0.5;
 
 	// 0 AQI is not valid
 	if (currentAQI > 0)
@@ -191,30 +181,33 @@ int speedSelect(int currentAQI, float currentTemp, int currentSpeed)
 		switch (currentSpeed) 
 		{
 			case FAN_OFF:
-				if (currentAQI > AQB[0] + H)
-					return tempAdjust(FAN_S1, currentTemp);
+				// Temperature adjustment for speed. The idea is if temperature is above some threshold value,
+				// fan should start at S1 regardless to the air quality. 
+				if (currentAQI > AQB[0] + H || currentTemp > TEMP_THRESHOLD_FAN_ON + hist)
+					return FAN_S1;
 				break;
 
 			case FAN_S1:
 				if (currentAQI > AQB[1] + H)
-					return tempAdjust(FAN_S2, currentTemp);
-				if (currentAQI < AQB[0] - H)
-					return tempAdjust(FAN_OFF, currentTemp);
+					return FAN_S2;
+				if (currentAQI < AQB[0] - H && currentTemp < TEMP_THRESHOLD_FAN_ON)
+					return FAN_OFF;
 				break;
 
 			case FAN_S2:
 				if (currentAQI > AQB[2] + H)
-					return tempAdjust(FAN_S3, currentTemp);
+					return FAN_S3;
 				if (currentAQI < AQB[1] - H)
-					return tempAdjust(FAN_S1, currentTemp);
+					return FAN_S1;
 				break;
+				
 			case FAN_S3:
 				if (currentAQI < AQB[2] - H)
-					return tempAdjust(FAN_S2, currentTemp);
+					return FAN_S2;
 				break;
 		}
 	}
-	return tempAdjust(currentSpeed, currentTemp);
+	return currentSpeed;
 }
 
 // The main loop.
