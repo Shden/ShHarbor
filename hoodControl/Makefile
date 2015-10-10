@@ -7,6 +7,8 @@ MCU = atmega328p
 ISP_PORT = /dev/cu.usbserial
 AVRDUDE_ARD_BAUDRATE = 57600
 
+ARDUINO_LIBS = OneWire
+
 include $(ARDMK_DIR)/Arduino.mk
 
 # !!! Important. You have to use make ispload to upload when using ISP programmer

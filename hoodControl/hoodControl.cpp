@@ -14,13 +14,15 @@ Schematics: https://github.com/Shden/ShHarbor/blob/master/docs/schematics.pdf.
 #include "control.h"
 #include "operation.h"
 #include "Arduino.h"
+#include "temperatureSensor.h"
 
 // these pins go to the particle density sensor:
-#define PARTICLES_10 2
-#define PARTICLES_25 3
-
-#define SPAN_TIME 60000.0 			// 30 sec time span to measure air quality
-#define HC_BUILD "1.0.1"
+#define PARTICLES_10 		2
+#define PARTICLES_25 		3
+#define DS1820_PIN		A0
+#define SPAN_TIME 		60000.0 	// 60 sec time span to measure air quality
+#define HC_BUILD 		"1.1.0"
+#define TEMP_THRESHOLD_FAN_ON	27.0		// fan is on if above 27.0 degree celcius
 
 #define NO__DEBUG__NO
 
@@ -30,6 +32,7 @@ struct ControllerData
 	ControllerStatus controllerState;	// Keeps the current state of the controller.
 	Control controlPanel;			// This is the front panel representation.
 	Operation operationModule;		// This is under the hood operation module representation.
+	TemperatureSensor* temperatureSensor;	// DS1820 stuff is hidden here.
 
 	volatile uint32_t tn[2];		// These weird stuff is for dust counting.
 	volatile uint32_t tlow[2];
@@ -118,8 +121,11 @@ void particlesHandler(int idx, int signal)
 		Serial.print(getAQI());
 		Serial.print("\tw(0): ");
 		Serial.print(getParticalWeight(0));
-		Serial.print("\tw(1)");
+		Serial.print("\tw(1): ");
 		Serial.println(getParticalWeight(1));
+		
+		Serial.print("Temperature: ");
+		Serial.println(gd->temperatureSensor->getTemperature());
 		
 	}
 }
@@ -141,6 +147,9 @@ void setup()
 	Serial.print("Hood control build: ");
 	Serial.println(HC_BUILD);
 	Serial.println("Initialization.");
+	
+	// Initialize DS1820 wrapper
+	gd->temperatureSensor = new TemperatureSensor(DS1820_PIN);
 
 	// Initialize DSM501 pins & attach interrupt handlers
 	pinMode(PARTICLES_10, INPUT);
@@ -156,41 +165,56 @@ void setup()
 	gd->controllerState.autoMode = 1;
 }
 
-// Select the fan speed based on air quality with histeresis.
-int speedSelect(int currentAQI, int currentSpeed) 
+// Temperature adjustment for speed. The idea is if temperature is above some threshold value,
+// fan should start at S1 regardless to the air quality. This is a 'private' method to use from 
+// speedSelect(...) only.
+int tempAdjust(int speed, float temperature)
 {
-	const int AQB[] = { 500, 1000, 2000 };
+	if (temperature > TEMP_THRESHOLD_FAN_ON && FAN_OFF == speed)
+		return FAN_S1;
+	else
+		return speed;
+}
+
+// Select the fan speed based on air quality and temperature with histeresis.
+//	@currentAQI - current air quialily from DSM501
+//	@currentTemp - temperature from DS1820
+//	@currentSpeed - how ventilation is working now
+int speedSelect(int currentAQI, float currentTemp, int currentSpeed) 
+{
+	const int AQB[] = { 500, 1000, 2800 };
 	const int H = 100;
 
+	// 0 AQI is not valid
 	if (currentAQI > 0)
 	{
 		switch (currentSpeed) 
 		{
 			case FAN_OFF:
 				if (currentAQI > AQB[0] + H)
-					return FAN_S1;
+					return tempAdjust(FAN_S1, currentTemp);
 				break;
 
 			case FAN_S1:
 				if (currentAQI > AQB[1] + H)
-					return FAN_S2;
+					return tempAdjust(FAN_S2, currentTemp);
 				if (currentAQI < AQB[0] - H)
-					return FAN_OFF;
+					return tempAdjust(FAN_OFF, currentTemp);
 				break;
 
 			case FAN_S2:
 				if (currentAQI > AQB[2] + H)
-					return FAN_S3;
+					return tempAdjust(FAN_S3, currentTemp);
 				if (currentAQI < AQB[1] - H)
-					return FAN_S1;
+					return tempAdjust(FAN_S1, currentTemp);
 				break;
 			case FAN_S3:
 				if (currentAQI < AQB[2] - H)
-					return FAN_S2;
+					return tempAdjust(FAN_S2, currentTemp);
 				break;
 		}
 	}
-	return currentSpeed;
+	return tempAdjust(currentSpeed, currentTemp);
 }
 
 // The main loop.
@@ -298,11 +322,14 @@ void loop()
 
 	// display the current *controller* mode (not the operation module state!)
 	gd->controlPanel.displayMode(gd->controllerState);
+	
+	// do the housekeeping for DS1820
+	gd->temperatureSensor->updateTemperature();
 
 	// the fan control itself:
 	if (gd->controllerState.autoMode) 
 	{
-		gd->controllerState.speed = speedSelect(getAQI(), gd->controllerState.speed);
+		gd->controllerState.speed = speedSelect(getAQI(), gd->temperatureSensor->getTemperature(), gd->controllerState.speed);
 		gd->operationModule.setFanState(gd->controllerState.speed);
 	}
 }
