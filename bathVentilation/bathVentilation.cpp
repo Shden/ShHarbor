@@ -1,16 +1,28 @@
 #include "Arduino.h"
 #include "bathVentilation.h"
 
-#define HIH_PIN				456
-#define RELAY_PIN 			789
-#define BVC_BUILD			"0.0.1"
+#define HIH_PIN				A0
+#define RELAY_PIN 			10
+#define BVC_BUILD			"0.0.2"
+#define DS1820_PIN			12
 
-#define VENTILATION_START_THRESHOLD	70
+#define VENTILATION_START_THRESHOLD	65
 #define VENTILATION_STOP_THRESHOLD	60
+
+// Global data used by the contoller. At least keep this in one struct.
+struct ControllerData
+{
+	int ventilationState; 
+} GD;
+
 
 // Controller setup procedure
 void setup() 
 {
+	// Warning: uses global data.
+	ControllerData *gd = &GD;
+	gd->ventilationState = -1;
+	
 	Serial.begin(9600);
 	Serial.print("Bath ventilation control build: ");
 	Serial.println(BVC_BUILD);
@@ -22,32 +34,29 @@ void setup()
 // The Loop
 void loop()
 {
+	// Warning: uses global data.
+	ControllerData *gd = &GD;
+	
 	const int hihValue = analogRead(HIH_PIN);
-	
-	// Relative humidity(RH) (These are the values have taken from http://crazyguy.info/?p=8):
-	// 0% = about 163
-	// 100% = about 795
-	// With roughly linear response.
-	// 795 - 163 = 632 (points in the sensor's range)
-	// 6.32 points = 1% RH
-	
-	const float RH = (hihValue - 163) / 6.32;
+	const float RH = (hihValue - 177) / 6.11;
 	Serial.print("Humidity update: ");
 	Serial.print(RH);
 	Serial.println("%");
 	
 	// Relay control
-	if (RH > VENTILATION_START_THRESHOLD)
+	if (RH > VENTILATION_START_THRESHOLD && gd->ventilationState != 1)
 	{
 		Serial.println("Starting ventilation.");
 		digitalWrite(RELAY_PIN, HIGH);
+		gd->ventilationState = 1;
 	}
-	else if (RH < VENTILATION_STOP_THRESHOLD)
+	else if (RH < VENTILATION_STOP_THRESHOLD && gd->ventilationState != 0)
 	{
 		Serial.println("Stopping ventilation.");
 		digitalWrite(RELAY_PIN, LOW);
+		gd->ventilationState = 0;
 	}
-	
+		
 	// Wait 30 seconds
-	delay(30 * 1000); 
+	delay(3 * 1000); 
 }
