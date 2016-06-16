@@ -3,11 +3,11 @@
 
 #define HIH_PIN				A0
 #define RELAY_PIN 			10
-#define BVC_BUILD			"0.0.2"
+#define BVC_BUILD			"0.0.3"
 #define DS1820_PIN			12
 
-#define VENTILATION_START_THRESHOLD	65
-#define VENTILATION_STOP_THRESHOLD	60
+#define VENTILATION_START_THRESHOLD	75	// Was 65/60 for winter season
+#define VENTILATION_STOP_THRESHOLD	70
 
 // Global data used by the contoller. At least keep this in one struct.
 struct ControllerData
@@ -57,6 +57,6 @@ void loop()
 		gd->ventilationState = 0;
 	}
 		
-	// Wait 30 seconds
+	// Wait 3 seconds
 	delay(3 * 1000); 
 }
