@@ -42,7 +42,7 @@ void loop()
 	Serial.print("Humidity update: ");
 	Serial.print(RH);
 	Serial.println("%");
-	
+		
 	// Relay control
 	if (RH > VENTILATION_START_THRESHOLD && gd->ventilationState != 1)
 	{
