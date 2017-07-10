@@ -19,7 +19,7 @@
 // Global data used by the contoller. At least keep this in one struct.
 struct ControllerData
 {
-	int	ventilationState; 
+	int	ventilationState;
         float	off_threshold;
         float	on_threshold;
         int	EMA_steps;
@@ -28,7 +28,7 @@ struct ControllerData
 
 
 // Controller setup procedure
-void setup() 
+void setup()
 {
 	// Warning: uses global data.
 	ControllerData *gd = &GD;
@@ -37,7 +37,7 @@ void setup()
 	gd->on_threshold = VENTILATION_ON_THRESHOLD;
 	gd->EMA_steps = VENTILATION_EMA_STEPS;
 	gd->EMA = VENTILATION_START_EMA;
-	
+
 	Serial.begin(9600);
 	Serial.print("Bath ventilation control build: ");
 	Serial.println(BVC_BUILD);
@@ -58,18 +58,19 @@ void loop()
 {
 	// Warning: uses global data.
 	ControllerData *gd = &GD;
-	
+
 	const int hihValue = analogRead(HIH_PIN);
-	const float RH = (hihValue - 177) / 6.11;
+	const float RH = (hihValue - 177.0) / 6.11;
 
 	// update EMA humidity in the gd
 	gd->EMA = EMA(gd->EMA_steps, gd->EMA, RH);
 
+Serial.print(hihValue);
 	Serial.print("Humidity update: ");
 	Serial.print(RH);
 	Serial.print("%, EMA update: ");
 	Serial.println(gd->EMA);
-		
+
 	// Relay control
 	if (RH > gd->EMA + gd->on_threshold && gd->ventilationState != 1)
 	{
@@ -83,7 +84,7 @@ void loop()
 		digitalWrite(RELAY_PIN, LOW);
 		gd->ventilationState = 0;
 	}
-		
+
 	// Wait 3 seconds
-	delay(VENTILATION_LOOP_TIME); 
+	delay(VENTILATION_LOOP_TIME);
 }
