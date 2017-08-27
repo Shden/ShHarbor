@@ -1,3 +1,4 @@
+
 /*
         Bath floor temperature control module based on ESP8266 SoC.
 
@@ -20,7 +21,7 @@
 #include <temperatureSensor.h>
 #include <Timer.h>
 
-#define ONE_WIRE_PIN            0
+#define ONE_WIRE_PIN            4
 #define AC_CONTROL_PIN          2
 #define WEB_SERVER_PORT         80
 #define UPDATE_TEMP_EVERY       (1000L)         // every 1 sec
