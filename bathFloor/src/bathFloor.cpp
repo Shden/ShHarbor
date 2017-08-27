@@ -226,10 +226,11 @@ void setup()
 	{
 		delay(500);
 		Serial.print(".");
-		if (++connectionAttempts > 20)
+		if (++connectionAttempts > 40)
 		{
 			Serial.println("Unable to connect.");
-			getUserConfiguration();
+			ESP.restart();
+			//getUserConfiguration();
 		}
 	}
 	Serial.println();
