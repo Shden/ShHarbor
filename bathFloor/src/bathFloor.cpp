@@ -1,4 +1,3 @@
-
 /*
 	Thermostat module based on ESP8266 SoC.
 
@@ -20,19 +19,23 @@
 #include <ESP8266mDNS.h>
 #include <temperatureSensor.h>
 #include <Timer.h>
+#include <OTA.h>
 
 #define ONE_WIRE_PIN            5
 #define AC_CONTROL_PIN          13
 #define WEB_SERVER_PORT         80
 #define UPDATE_TEMP_EVERY       (5000L)         // every 5 sec
 #define CHECK_HEATING_EVERY     (60000L)        // every 1 min
+#define CHECK_FIRMWARE_EVERY	(5000L)		// debug: every 5 sec
 #define EEPROM_INIT_CODE        28465
 #define SSID_LEN                80
 #define SECRET_LEN              80
 #define DEFAULT_FLOOR_TEMP      28.0
 #define DEFAULT_ACTIVE		0
-#define BUILD_VERSION           "0.4.2"
 #define MDNS_HOST               "HB-THERMOSTAT"
+
+const char* fwUrlBase = "http://192.168.1.200/firmware/ShHarbor/thermostat/";
+const int FW_VERSION = 810;
 
 void saveConfiguration();
 
@@ -104,7 +107,7 @@ void HandleHTTPGetStatus()
 	", " +
 	"\"Heating\" : " + String(gd->heatingOn) +
 	", " +
-	"\"Build\" : " + String(BUILD_VERSION) +
+	"\"Build\" : " + String(FW_VERSION) +
 	" }\r\n";
 
 	gd->thermostatServer->send(200, "application/json", json);
@@ -123,15 +126,16 @@ void HandleHTTPTargetTemperature()
 		config.targetTemp = temperature;
 		saveConfiguration();
 		gd->thermostatServer->send(200, "application/json",
-		"Updated to: " + param + "\r\n");
+			"Updated to: " + param + "\r\n");
 	}
 	else
 	{
 		gd->thermostatServer->send(401, "text/html",
-		"Wrong value: " + param + "\r\n");
+			"Wrong value: " + param + "\r\n");
 	}
 }
 
+// HTTP PUT /Active
 void HandleHTTPActive()
 {
 	// Warning: uses global data
@@ -144,12 +148,12 @@ void HandleHTTPActive()
 		config.active = active;
 		saveConfiguration();
 		gd->thermostatServer->send(200, "application/json",
-		"Updated to: " + activeParam + "\r\n");
+			"Updated to: " + activeParam + "\r\n");
 	}
 	else
 	{
 		gd->thermostatServer->send(401, "text/html",
-		"Wrong value: " + activeParam + "\r\n");
+			"Wrong value: " + activeParam + "\r\n");
 	}
 }
 
@@ -268,11 +272,18 @@ void makeSureWiFiConnected()
 	}
 }
 
+// Go check if there is a new firmware version got available.
+void checkFirmwareUpdates()
+{
+	// pass current FW version and base URL to lookup
+	checkForUpdates(FW_VERSION, fwUrlBase);
+}
+
 void setup()
 {
 	Serial.begin(115200);
 	Serial.println("Initialisation.");
-	Serial.printf("Bath floor controller version %s.\n", BUILD_VERSION);
+	Serial.printf("Bath floor controller build %d.\n", FW_VERSION);
 
 	Serial.println("Configuration loading.");
 	loadConfiguration();
@@ -297,6 +308,7 @@ void setup()
 	// Set up regulars
 	gd->timer->every(UPDATE_TEMP_EVERY, temperatureUpdate);
 	gd->timer->every(CHECK_HEATING_EVERY, controlHeating);
+	gd->timer->every(CHECK_FIRMWARE_EVERY, checkFirmwareUpdates);
 
 	pinMode(AC_CONTROL_PIN, OUTPUT);
 }
