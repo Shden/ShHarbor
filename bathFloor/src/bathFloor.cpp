@@ -5,6 +5,7 @@
 	- DS1820 temperature control sensor.
 	- AC 220V power control.
 	- REST API to monitor/contol heating parameters.
+	- OTA firmware update.
 
 	Toolchain: PlatformIO.
 
