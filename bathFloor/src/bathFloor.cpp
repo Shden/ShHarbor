@@ -1,15 +1,15 @@
 
 /*
-	Bath floor temperature control module based on ESP8266 SoC.
+	Thermostat module based on ESP8266 SoC.
 
 	Features:
 	- DS1820 temperature control sensor.
 	- AC 220V power control.
-	- REST API to monitor/contol heating paramenters.
+	- REST API to monitor/contol heating parameters.
 
 	Toolchain: PlatformIO.
 
-	By den@dataart.com
+	By denis.afanassiev@gmail.com
 */
 
 #include <Arduino.h>
@@ -30,15 +30,16 @@
 #define SSID_LEN                80
 #define SECRET_LEN              80
 #define DEFAULT_FLOOR_TEMP      28.0
-#define BUILD_VERSION           "0.4.1"
-#define MDNS_HOST               "HB-BATH-FLOOR"
+#define DEFAULT_ACTIVE		0
+#define BUILD_VERSION           "0.4.2"
+#define MDNS_HOST               "HB-THERMOSTAT"
 
 void saveConfiguration();
 
 struct ControllerData
 {
 	TemperatureSensor*      temperatureSensor;
-	ESP8266WebServer*       floorServer;
+	ESP8266WebServer*       thermostatServer;
 	MDNSResponder*          mdns;
 	Timer*                  timer;
 	uint8_t                 heatingOn;
@@ -49,11 +50,12 @@ struct ConfigurationData
 	int16_t                 initialised;
 	char                    ssid[SSID_LEN + 1];
 	char                    secret[SECRET_LEN + 1];
-	float                   floorTargetTemp;
+	float                   targetTemp;
+	int8_t			active;
 } config;
 
-// Go to floor sensor and get current temperature.
-float getFloorTemperature()
+// Go to sensor and get current temperature.
+float getTemperature()
 {
 	// Warning: uses global data.
 	ControllerData *gd = &GD;
@@ -69,17 +71,19 @@ void temperatureUpdate()
 
 	gd->temperatureSensor->updateTemperature();
 
-	float temp = getFloorTemperature();
-	Serial.printf("Floor temperature: %d.%02d\n", (int)temp, (int)(temp*100)%100);
+	float temp = getTemperature();
+
+	// Here goes workaround for %f which wasnt working right.
+	Serial.printf("Temperature: %d.%02d\n", (int)temp, (int)(temp*100)%100);
 }
 
-// This controls floor heating.
-void floorHeatingControl()
+// Heating control.
+void controlHeating()
 {
 	// Warning: uses global data.
 	ControllerData *gd = &GD;
 
-	gd->heatingOn = getFloorTemperature() < config.floorTargetTemp;
+	gd->heatingOn = config.active && getTemperature() < config.targetTemp;
 	digitalWrite(AC_CONTROL_PIN, gd->heatingOn);
 	Serial.printf("Heating state: %d\n", gd->heatingOn);
 }
@@ -92,34 +96,60 @@ void HandleHTTPGetStatus()
 
 	String json =
 	String("{ ") +
-	"\"FloorTemperature\" : " + String(getFloorTemperature(), 2) +
+	"\"CurrentTemperature\" : " + String(getTemperature(), 2) +
 	", " +
-	"\"TargetTemperature\" : " + String(config.floorTargetTemp, 2) +
+	"\"TargetTemperature\" : " + String(config.targetTemp, 2) +
+	", " +
+	"\"Active\" : " + String(config.active) +
 	", " +
 	"\"Heating\" : " + String(gd->heatingOn) +
+	", " +
+	"\"Build\" : " + String(BUILD_VERSION) +
 	" }\r\n";
 
-	gd->floorServer->send(200, "application/json", json);
+	gd->thermostatServer->send(200, "application/json", json);
 }
 
+// HTTP PUT /TargetTemperature
 void HandleHTTPTargetTemperature()
 {
 	// Warning: uses global data
 	ControllerData *gd = &GD;
 
-	String param = gd->floorServer->arg("temp");
+	String param = gd->thermostatServer->arg("temp");
 	float temperature = param.toFloat();
 	if (temperature > 0.0 && temperature < 100.0)
 	{
-		config.floorTargetTemp = temperature;
+		config.targetTemp = temperature;
 		saveConfiguration();
-		gd->floorServer->send(200, "application/json",
+		gd->thermostatServer->send(200, "application/json",
 		"Updated to: " + param + "\r\n");
 	}
 	else
 	{
-		gd->floorServer->send(401, "text/html",
+		gd->thermostatServer->send(401, "text/html",
 		"Wrong value: " + param + "\r\n");
+	}
+}
+
+void HandleHTTPActive()
+{
+	// Warning: uses global data
+	ControllerData *gd = &GD;
+
+	String activeParam = gd->thermostatServer->arg("active");
+	int active = activeParam.toInt();
+	if (active == 0 || active == 1)
+	{
+		config.active = active;
+		saveConfiguration();
+		gd->thermostatServer->send(200, "application/json",
+		"Updated to: " + activeParam + "\r\n");
+	}
+	else
+	{
+		gd->thermostatServer->send(401, "text/html",
+		"Wrong value: " + activeParam + "\r\n");
 	}
 }
 
@@ -168,8 +198,11 @@ void getUserConfiguration()
 	Serial.print("Secret: ");
 	readString(config.secret, SECRET_LEN);
 
-	config.floorTargetTemp = DEFAULT_FLOOR_TEMP;
+	// Defaults
+	config.targetTemp = DEFAULT_FLOOR_TEMP;
+	config.active = DEFAULT_ACTIVE;
 
+	// Initisalised flag
 	config.initialised = EEPROM_INIT_CODE;
 
 	// And put it back to EEPROM for the next time
@@ -200,6 +233,41 @@ void loadConfiguration()
 	Serial.printf("SSID to connect: %s\n", config.ssid);
 }
 
+// Either WiFi is connected or restart.
+void makeSureWiFiConnected()
+{
+	// Warning: uses global data
+	ControllerData *gd = &GD;
+
+	if (WL_CONNECTED != WiFi.status())
+	{
+		Serial.println("Disconnected.");
+		WiFi.begin(config.ssid, config.secret);
+		Serial.print("Connecting to WiFi hotspot: ");
+
+		// Wait for connection
+		int connectionAttempts = 0;
+		while (WiFi.status() != WL_CONNECTED)
+		{
+			delay(500);
+			Serial.print(".");
+			if (++connectionAttempts > 40)
+			{
+				Serial.println("Unable to connect.");
+				ESP.restart();
+			}
+		}
+		Serial.println();
+		Serial.printf("Connected to: %s\n", config.ssid);
+		Serial.printf("IP address: %s\n", WiFi.localIP().toString().c_str());
+
+		if (gd->mdns->begin(MDNS_HOST, WiFi.localIP()))
+		{
+			Serial.println("MDNS responder started.");
+		}
+	}
+}
+
 void setup()
 {
 	Serial.begin(115200);
@@ -212,45 +280,23 @@ void setup()
 	// Warning: uses global data
 	ControllerData *gd = &GD;
 
-	gd->floorServer = new ESP8266WebServer(WEB_SERVER_PORT);
+	gd->thermostatServer = new ESP8266WebServer(WEB_SERVER_PORT);
 	gd->temperatureSensor = new TemperatureSensor(ONE_WIRE_PIN);
 	gd->timer = new Timer();
 	gd->mdns = new MDNSResponder();
 
-	WiFi.begin(config.ssid, config.secret);
-	Serial.print("Connecting to WiFi hotspot: ");
+	makeSureWiFiConnected();
 
-	// Wait for connection
-	int connectionAttempts = 0;
-	while (WiFi.status() != WL_CONNECTED)
-	{
-		delay(500);
-		Serial.print(".");
-		if (++connectionAttempts > 40)
-		{
-			Serial.println("Unable to connect.");
-			ESP.restart();
-			//getUserConfiguration();
-		}
-	}
-	Serial.println();
-	Serial.printf("Connected to: %s\n", config.ssid);
-	Serial.printf("IP address: %s\n", WiFi.localIP().toString().c_str());
+	gd->thermostatServer->on("/Status", HTTPMethod::HTTP_GET, HandleHTTPGetStatus);
+	gd->thermostatServer->on("/TargetTemperature", HTTPMethod::HTTP_PUT, HandleHTTPTargetTemperature);
+	gd->thermostatServer->on("/Active", HTTPMethod::HTTP_PUT, HandleHTTPActive);
 
-	if (gd->mdns->begin(MDNS_HOST, WiFi.localIP()))
-	{
-		Serial.println("MDNS responder started");
-	}
-
-	gd->floorServer->on("/Status", HTTPMethod::HTTP_GET, HandleHTTPGetStatus);
-	gd->floorServer->on("/TargetTemperature", HTTPMethod::HTTP_PUT, HandleHTTPTargetTemperature);
-
-	gd->floorServer->begin();
+	gd->thermostatServer->begin();
 	Serial.println("HTTP server started.");
 
 	// Set up regulars
 	gd->timer->every(UPDATE_TEMP_EVERY, temperatureUpdate);
-	gd->timer->every(CHECK_HEATING_EVERY, floorHeatingControl);
+	gd->timer->every(CHECK_HEATING_EVERY, controlHeating);
 
 	pinMode(AC_CONTROL_PIN, OUTPUT);
 }
@@ -259,6 +305,7 @@ void loop()
 {
 	ControllerData *gd = &GD;
 
-	gd->floorServer->handleClient();
+	makeSureWiFiConnected();
+	gd->thermostatServer->handleClient();
 	gd->timer->update();
 }
