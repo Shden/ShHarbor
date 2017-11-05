@@ -1,5 +1,5 @@
 #!/bin/bash
-BUILD_DIR=~/ShHarbor/bathFloor/.pioenvs/esp01
+BUILD_DIR=~/ShHarbor/bathFloor/.pioenvs/esp12
 PUBLISH_DIR=~/Shden/shweb/firmware/ShHarbor/thermostat
 BUILD_NUMBER=$(<.buildnumber)
 

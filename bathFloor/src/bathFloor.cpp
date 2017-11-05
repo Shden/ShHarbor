@@ -27,7 +27,7 @@
 #define WEB_SERVER_PORT         80
 #define UPDATE_TEMP_EVERY       (5000L)         // every 5 sec
 #define CHECK_HEATING_EVERY     (60000L)        // every 1 min
-#define CHECK_FIRMWARE_EVERY	(5000L)		// debug: every 5 sec
+#define CHECK_FIRMWARE_EVERY	(60000L*5)	// every 5 min
 #define EEPROM_INIT_CODE        28465
 #define SSID_LEN                80
 #define SECRET_LEN              80
@@ -36,7 +36,7 @@
 #define MDNS_HOST               "HB-THERMOSTAT"
 
 const char* fwUrlBase = "http://192.168.1.200/firmware/ShHarbor/thermostat/";
-const int FW_VERSION = 810;
+const int FW_VERSION = 814;
 
 void saveConfiguration();
 

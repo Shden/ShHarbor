@@ -37,7 +37,7 @@ void checkForUpdates(int currentVersion, const char* fwUrlBase)
 
 			String fwImageURL = fwUrlBase;
 			fwImageURL.concat("SHH-TS-");
-			fwImageURL.concat(newFWVersion);
+			fwImageURL.concat(String(newVersion));
 			fwImageURL.concat(".bin");
 			Serial.print("Firmware image URL: ");
 			Serial.println(fwImageURL);
