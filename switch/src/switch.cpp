@@ -30,13 +30,13 @@
 #define SSID_LEN                80
 #define SECRET_LEN              80
 #define LINKED_SWITCH_ADDR_LEN	80
-#define MDNS_HOST               "HB-SWITCH"
 #define SW_LINES		3
+#define MDNS_HOST               "HB-SWITCH"
 #define CHANGE_LINE_METHOD	"/ChangeLine"
 
 // ESP-12 pins:
 // inputs: U6, U7, U8
-#define U6			5		// these two numbering
+#define U6			5		// these two line numbers are
 #define U7			4		// swapped for some reason
 #define U8			2
 // outputs: U3, U4, U5
@@ -311,6 +311,8 @@ void updateLine(int lineNumber)
 
 	if (lineState != digitalRead(gd->powerPins[lineNumber]))
 	{
+		Serial.printf("Updating line %d to new state %d\n", lineNumber + 1, lineState);
+		
 		digitalWrite(gd->powerPins[lineNumber], lineState);
 
 		if (config.linkedSwitchAddress[lineNumber] != '\0')
@@ -363,17 +365,10 @@ void setup()
 	gd->switchServer->on(CHANGE_LINE_METHOD, HTTPMethod::HTTP_PUT, HandleHTTPChangeLine);
 	gd->switchServer->on("/SetLinkedSwitch", HTTPMethod::HTTP_PUT, HandleHTTPSetLinkedSwitch);
 
-	// Switch pins
-	gd->switchPins[0] = I1;
-	gd->switchPins[1] = I2;
-	gd->switchPins[2] = I3;
-
-	// Power pins
-	gd->powerPins[0] = O1;
-	gd->powerPins[1] = O2;
-	gd->powerPins[2] = O3;
-
-	gd->remoteControlBits[0] = gd->remoteControlBits[1] = gd->remoteControlBits[2] = 0;
+	// Switch pins          Power pins
+	gd->switchPins[0] = I1; gd->powerPins[0] = O1; gd->remoteControlBits[0] = 0;
+	gd->switchPins[1] = I2; gd->powerPins[1] = O2; gd->remoteControlBits[1] = 0;
+	gd->switchPins[2] = I3; gd->powerPins[2] = O3; gd->remoteControlBits[2] = 0;
 
 	gd->switchServer->begin();
 	Serial.println("HTTP server started.");
