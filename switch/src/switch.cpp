@@ -3,7 +3,9 @@
 
 	Features:
 	- Up to 3 channels (switch + light).
-	- REST API to monitor/contol heating parameters.
+	- REST API to monitor/contol light.
+	- Wall mounted switches support.
+	- Multiple linked switches.
 	- OTA firmware update.
 
 	Toolchain: PlatformIO.
@@ -16,6 +18,7 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
+#include <ESP8266HTTPClient.h>
 #include <ESP8266mDNS.h>
 #include <Timer.h>
 #include <OTA.h>
@@ -29,6 +32,7 @@
 #define LINKED_SWITCH_ADDR_LEN	80
 #define MDNS_HOST               "HB-SWITCH"
 #define SW_LINES		3
+#define CHANGE_LINE_METHOD	"/ChangeLine"
 
 // ESP-12 pins:
 // inputs: U6, U7, U8
@@ -69,6 +73,7 @@ struct ConfigurationData
 	char                    ssid[SSID_LEN + 1];
 	char                    secret[SECRET_LEN + 1];
 	char			linkedSwitchAddress[SW_LINES][LINKED_SWITCH_ADDR_LEN + 1];
+	int			linkedSwitchLine[SW_LINES];
 } config;
 
 // HTTP GET /Status
@@ -80,13 +85,19 @@ void HandleHTTPGetStatus()
 		String("{ ") +
 		"\"L1\" : { " +
 			"\"Status\" : " + String(digitalRead(gd->powerPins[0])) + ", " +
-			"\"Link\" : " + String(config.linkedSwitchAddress[0]) + ", } " +
+			"\"Link\" : { " +
+				"\"Address\" : " + String(config.linkedSwitchAddress[0]) + ", " +
+				"\"Line\" : " + String(config.linkedSwitchLine[0])+ ", } } " +
 		"\"L2\" : { " +
 			"\"Status\" : " + String(digitalRead(gd->powerPins[1])) + ", " +
-			"\"Link\" : " + String(config.linkedSwitchAddress[1]) + ", } " +
+			"\"Link\" : { " +
+				"\"Address\" : " + String(config.linkedSwitchAddress[1]) + ", " +
+				"\"Line\" : " + String(config.linkedSwitchLine[1])+ ", } } " +
 		"\"L3\" : { " +
 			"\"Status\" : " + String(digitalRead(gd->powerPins[2])) + ", " +
-			"\"Link\" : " + String(config.linkedSwitchAddress[2]) + ", } " +
+			"\"Link\" : { " +
+				"\"Address\" : " + String(config.linkedSwitchAddress[2]) + ", " +
+				"\"Line\" : " + String(config.linkedSwitchLine[2])+ ", } } " +
 		"\"Build\" : " + String(FW_VERSION) +
 		" }\r\n";
 
@@ -139,19 +150,25 @@ void HandleHTTPSetLinkedSwitch()
 	ControllerData *gd = &GD;
 
 	String line = gd->switchServer->arg("line");
-	String address = gd->switchServer->arg("address");
+	String linkedAddress = gd->switchServer->arg("linkedaddress");
+	String linkedLine = gd->switchServer->arg("linkedline");
 
 	int lineNum = line.toInt();
+	int linkedLineNum = linkedLine.toInt();
 
 	if (lineNum >= 1 && lineNum <= 3)
 	{
 		strncpy(
 			config.linkedSwitchAddress[lineNum - 1],
-			address.c_str(),
+			linkedAddress.c_str(),
 			LINKED_SWITCH_ADDR_LEN);
+
+		config.linkedSwitchLine[lineNum - 1] = linkedLineNum;
+
 		saveConfiguration();
 		gd->switchServer->send(200, "application/json",
-			"Updated to: " + address + "\r\n");
+			"Updated to: " + linkedAddress +
+			" and line: " + linkedLine + "\r\n");
 	}
 	else
 	{
@@ -295,7 +312,25 @@ void updateLine(int lineNumber)
 	if (lineState != digitalRead(gd->powerPins[lineNumber]))
 	{
 		digitalWrite(gd->powerPins[lineNumber], lineState);
-		// TODO: add linked switch update here
+
+		if (config.linkedSwitchAddress[lineNumber] != '\0')
+		{
+			// linked swich update HTTP reqiest
+			String changeLinkedLineURL =
+				String(config.linkedSwitchAddress[lineNumber]) +
+				String(CHANGE_LINE_METHOD) +
+				String("?line=") + String(lineNumber + 1) +
+				String("&state=") + String(lineState);
+
+			Serial.print("Linked update reqiest url: ");
+			Serial.println(changeLinkedLineURL);
+
+			HTTPClient httpClient;
+			httpClient.begin(changeLinkedLineURL);
+			int httpCode = httpClient.sendRequest("PUT", "");
+			Serial.printf("Responce code: %d\n", httpCode);
+			httpClient.end();
+		}
 	}
 }
 
@@ -310,7 +345,7 @@ void setup()
 {
 	Serial.begin(115200);
 	Serial.println("Initialisation.");
-	Serial.printf("Bath floor controller build %d.\n", FW_VERSION);
+	Serial.printf("Switch controller build %d.\n", FW_VERSION);
 
 	Serial.println("Configuration loading.");
 	loadConfiguration();
@@ -325,7 +360,7 @@ void setup()
 	makeSureWiFiConnected();
 
 	gd->switchServer->on("/Status", HTTPMethod::HTTP_GET, HandleHTTPGetStatus);
-	gd->switchServer->on("/ChangeLine", HTTPMethod::HTTP_PUT, HandleHTTPChangeLine);
+	gd->switchServer->on(CHANGE_LINE_METHOD, HTTPMethod::HTTP_PUT, HandleHTTPChangeLine);
 	gd->switchServer->on("/SetLinkedSwitch", HTTPMethod::HTTP_PUT, HandleHTTPSetLinkedSwitch);
 
 	// Switch pins
