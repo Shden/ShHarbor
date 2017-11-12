@@ -1,0 +1,38 @@
+{
+  "name": "controlpanel",
+  "version": "1.0.0",
+  "description": "ShHarbor Home Control Panel",
+  "main": "index.js",
+  "scripts": {
+    "test": "exit",
+    "lint": "exit",
+    "build": "npm run lint && npm test && webpack && webpack-dev-server --progress --inline"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Shden/ShHarbor.git"
+  },
+  "author": "Den Afanassiev",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Shden/ShHarbor/issues"
+  },
+  "homepage": "https://github.com/Shden/ShHarbor#readme",
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-core": "^6.26.0",
+    "babel-loader": "^7.1.2",
+    "babel-preset-env": "^1.6.1",
+    "babel-preset-react": "^6.24.1"
+  },
+  "dependencies": {
+    "create-react-class": "^15.6.2",
+    "react": "^16.1.0",
+    "react-bootstrap": "^0.31.5",
+    "react-dom": "^16.1.0",
+    "react-router-dom": "^4.2.2",
+    "socksjs": "^0.5.0",
+    "webpack": "^3.8.1",
+    "webpack-dev-server": "^2.9.4"
+  }
+}

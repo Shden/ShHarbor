@@ -53,7 +53,7 @@
 #define O3			U5
 
 const char* fwUrlBase = "http://192.168.1.200/firmware/ShHarbor/switch/";
-const int FW_VERSION = 603;
+const int FW_VERSION = 604;
 
 void saveConfiguration();
 
@@ -86,18 +86,18 @@ void HandleHTTPGetStatus()
 		"\"L1\" : { " +
 			"\"Status\" : " + String(digitalRead(gd->powerPins[0])) + ", " +
 			"\"Link\" : { " +
-				"\"Address\" : " + String(config.linkedSwitchAddress[0]) + ", " +
-				"\"Line\" : " + String(config.linkedSwitchLine[0])+ ", } } " +
+				"\"Address\" : \"" + String(config.linkedSwitchAddress[0]) + "\" , " +
+				"\"Line\" : " + String(config.linkedSwitchLine[0])+ " } } " +
 		"\"L2\" : { " +
 			"\"Status\" : " + String(digitalRead(gd->powerPins[1])) + ", " +
 			"\"Link\" : { " +
-				"\"Address\" : " + String(config.linkedSwitchAddress[1]) + ", " +
-				"\"Line\" : " + String(config.linkedSwitchLine[1])+ ", } } " +
+				"\"Address\" : \"" + String(config.linkedSwitchAddress[1]) + "\" , " +
+				"\"Line\" : " + String(config.linkedSwitchLine[1])+ " } } " +
 		"\"L3\" : { " +
 			"\"Status\" : " + String(digitalRead(gd->powerPins[2])) + ", " +
 			"\"Link\" : { " +
-				"\"Address\" : " + String(config.linkedSwitchAddress[2]) + ", " +
-				"\"Line\" : " + String(config.linkedSwitchLine[2])+ ", } } " +
+				"\"Address\" : \"" + String(config.linkedSwitchAddress[2]) + "\" , " +
+				"\"Line\" : " + String(config.linkedSwitchLine[2])+ " } } " +
 		"\"Build\" : " + String(FW_VERSION) +
 		" }\r\n";
 
