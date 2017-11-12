@@ -53,7 +53,7 @@
 #define O3			U5
 
 const char* fwUrlBase = "http://192.168.1.200/firmware/ShHarbor/switch/";
-const int FW_VERSION = 600;
+const int FW_VERSION = 603;
 
 void saveConfiguration();
 
@@ -312,16 +312,19 @@ void updateLine(int lineNumber)
 	if (lineState != digitalRead(gd->powerPins[lineNumber]))
 	{
 		Serial.printf("Updating line %d to new state %d\n", lineNumber + 1, lineState);
-		
+
 		digitalWrite(gd->powerPins[lineNumber], lineState);
 
-		if (config.linkedSwitchAddress[lineNumber] != '\0')
+		if (config.linkedSwitchAddress[lineNumber][0] != '\0')
 		{
+
 			// linked swich update HTTP reqiest
 			String changeLinkedLineURL =
+				String("http://") +
+
 				String(config.linkedSwitchAddress[lineNumber]) +
 				String(CHANGE_LINE_METHOD) +
-				String("?line=") + String(lineNumber + 1) +
+				String("?line=") + String(config.linkedSwitchLine[lineNumber]) +
 				String("&state=") + String(lineState);
 
 			Serial.print("Linked update reqiest url: ");
@@ -329,7 +332,7 @@ void updateLine(int lineNumber)
 
 			HTTPClient httpClient;
 			httpClient.begin(changeLinkedLineURL);
-			int httpCode = httpClient.sendRequest("PUT", "");
+			int httpCode = httpClient.sendRequest("PUT");
 			Serial.printf("Responce code: %d\n", httpCode);
 			httpClient.end();
 		}
@@ -388,5 +391,6 @@ void loop()
 	ControllerData *gd = &GD;
 
 	makeSureWiFiConnected();
+	gd->switchServer->handleClient();
 	gd->timer->update();
 }
