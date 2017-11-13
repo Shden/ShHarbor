@@ -53,9 +53,10 @@
 #define O3			U5
 
 const char* fwUrlBase = "http://192.168.1.200/firmware/ShHarbor/switch/";
-const int FW_VERSION = 604;
+const int FW_VERSION = 605;
 
 void saveConfiguration();
+void checkFirmwareUpdates();
 
 struct ControllerData
 {
@@ -81,25 +82,18 @@ void HandleHTTPGetStatus()
 {
 	ControllerData *gd = &GD;
 
-	String json =
-		String("{ ") +
-		"\"L1\" : { " +
-			"\"Status\" : " + String(digitalRead(gd->powerPins[0])) + ", " +
+	String json = String("{ \"Lines\" : [\n\r");
+
+	for (int i=0; i<SW_LINES; i++)
+	{
+		json += String("\t{ \"Status\" : ") +
+			String(digitalRead(gd->powerPins[i])) + ", " +
 			"\"Link\" : { " +
-				"\"Address\" : \"" + String(config.linkedSwitchAddress[0]) + "\" , " +
-				"\"Line\" : " + String(config.linkedSwitchLine[0])+ " } } " +
-		"\"L2\" : { " +
-			"\"Status\" : " + String(digitalRead(gd->powerPins[1])) + ", " +
-			"\"Link\" : { " +
-				"\"Address\" : \"" + String(config.linkedSwitchAddress[1]) + "\" , " +
-				"\"Line\" : " + String(config.linkedSwitchLine[1])+ " } } " +
-		"\"L3\" : { " +
-			"\"Status\" : " + String(digitalRead(gd->powerPins[2])) + ", " +
-			"\"Link\" : { " +
-				"\"Address\" : \"" + String(config.linkedSwitchAddress[2]) + "\" , " +
-				"\"Line\" : " + String(config.linkedSwitchLine[2])+ " } } " +
-		"\"Build\" : " + String(FW_VERSION) +
-		" }\r\n";
+				"\"Address\" : \"" + String(config.linkedSwitchAddress[i]) + "\" , " +
+				"\"Line\" : " + String(config.linkedSwitchLine[i])+ " } }\n\r";
+	}
+
+	json += String(", \"Build\" : ") + String(FW_VERSION) + " }";
 
 	gd->switchServer->send(200, "application/json", json);
 }
@@ -175,6 +169,21 @@ void HandleHTTPSetLinkedSwitch()
 		gd->switchServer->send(401, "text/html",
 			"Wrong line number: " + line + "\r\n");
 	}
+}
+
+// GET /CheckFirmwareUpdates
+void HandleHTTPCheckFirmwareUpdates()
+{
+	// Warning: uses global data
+	ControllerData *gd = &GD;
+
+	gd->switchServer->send(200, "text/html",
+		"Checking new firmware availability...\r\n");
+	checkFirmwareUpdates();
+
+	// if there was new version we wouldn't get here, so
+	gd->switchServer->send(200, "text/html",
+		"No update available now.\r\n");
 }
 
 // Get character sting from terminal.
@@ -367,6 +376,7 @@ void setup()
 	gd->switchServer->on("/Status", HTTPMethod::HTTP_GET, HandleHTTPGetStatus);
 	gd->switchServer->on(CHANGE_LINE_METHOD, HTTPMethod::HTTP_PUT, HandleHTTPChangeLine);
 	gd->switchServer->on("/SetLinkedSwitch", HTTPMethod::HTTP_PUT, HandleHTTPSetLinkedSwitch);
+	gd->switchServer->on("/CheckFirmwareUpdates", HTTPMethod::HTTP_GET, HandleHTTPCheckFirmwareUpdates);
 
 	// Switch pins          Power pins
 	gd->switchPins[0] = I1; gd->powerPins[0] = O1; gd->remoteControlBits[0] = 0;
