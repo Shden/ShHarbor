@@ -53,7 +53,7 @@
 #define O3			U5
 
 const char* fwUrlBase = "http://192.168.1.200/firmware/ShHarbor/switch/";
-const int FW_VERSION = 606;
+const int FW_VERSION = 607;
 
 void saveConfiguration();
 void checkFirmwareUpdates();
@@ -94,7 +94,7 @@ void HandleHTTPGetStatus()
 		if (i < SW_LINES - 1)
 			json += String(",");
 		else
-			json += String(" }");
+			json += String(" ]");
 		json += String("\n\r");
 	}
 
