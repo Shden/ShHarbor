@@ -22,6 +22,7 @@
 #include <ESP8266mDNS.h>
 #include <Timer.h>
 #include <OTA.h>
+#include <WebUI.h>
 
 #define WEB_SERVER_PORT         80
 #define CHECK_FIRMWARE_EVERY	(60000L*5)	// every 5 min
@@ -53,7 +54,7 @@
 #define O3			U5
 
 const char* fwUrlBase = "http://192.168.1.200/firmware/ShHarbor/switch/";
-const int FW_VERSION = 610;
+const int FW_VERSION = 611;
 
 void saveConfiguration();
 void checkFirmwareUpdates();
@@ -189,6 +190,15 @@ void HandleHTTPCheckFirmwareUpdates()
 	// if there was new version we wouldn't get here, so
 	gd->switchServer->send(200, "text/html",
 		"No update available now.\r\n");
+}
+
+// HTTP GET /index.html
+void HandleHTTPGetWebUIIndex()
+{
+	// Warning: uses global data
+	ControllerData *gd = &GD;
+
+	gd->switchServer->send_P(200, "text/html", (char*)index_html, index_html_len);
 }
 
 // Get character sting from terminal.
@@ -382,6 +392,9 @@ void setup()
 	gd->switchServer->on(CHANGE_LINE_METHOD, HTTPMethod::HTTP_GET, HandleHTTPChangeLine);
 	gd->switchServer->on("/SetLinkedSwitch", HTTPMethod::HTTP_GET, HandleHTTPSetLinkedSwitch);
 	gd->switchServer->on("/CheckFirmwareUpdates", HTTPMethod::HTTP_GET, HandleHTTPCheckFirmwareUpdates);
+
+	// Web UI resources
+	gd->switchServer->on("/index.html", HTTPMethod::HTTP_GET, HandleHTTPGetWebUIIndex);
 
 	// Switch pins          Power pins
 	gd->switchPins[0] = I1; gd->powerPins[0] = O1; gd->remoteControlBits[0] = 0;
