@@ -53,7 +53,7 @@
 #define O3			U5
 
 const char* fwUrlBase = "http://192.168.1.200/firmware/ShHarbor/switch/";
-const int FW_VERSION = 608;
+const int FW_VERSION = 610;
 
 void saveConfiguration();
 void checkFirmwareUpdates();
@@ -103,7 +103,7 @@ void HandleHTTPGetStatus()
 	gd->switchServer->send(200, "application/json", json);
 }
 
-// HTTP PUT /ChangeLine
+// HTTP GET /ChangeLine
 void HandleHTTPChangeLine()
 {
 	// Warning: uses global data
@@ -115,16 +115,16 @@ void HandleHTTPChangeLine()
 	int lineNum = line.toInt();
 	int newStateVal = newState.toInt();
 
-	if (lineNum >= 1 && lineNum <= 3)
+	if (lineNum >= 0 && lineNum <= 2)
 	{
 		if (newStateVal >= 0 && newStateVal <= 1)
 		{
 			int currentLineState =
-				(digitalRead(gd->powerPins[lineNum - 1]) == HIGH)
+				(digitalRead(gd->powerPins[lineNum]) == HIGH)
 				? 1 : 0;
 			if (currentLineState != newStateVal)
-				gd->remoteControlBits[lineNum - 1] =
-					!gd->remoteControlBits[lineNum - 1];
+				gd->remoteControlBits[lineNum] =
+					!gd->remoteControlBits[lineNum];
 
 			gd->switchServer->send(200, "application/json",
 				"Updated to: " + newState + "\r\n");
@@ -142,7 +142,7 @@ void HandleHTTPChangeLine()
 	}
 }
 
-// HTTP PUT /SetLinkedSwitch
+// HTTP GET /SetLinkedSwitch
 void HandleHTTPSetLinkedSwitch()
 {
 	// Warning: uses global data
@@ -155,14 +155,14 @@ void HandleHTTPSetLinkedSwitch()
 	int lineNum = line.toInt();
 	int linkedLineNum = linkedLine.toInt();
 
-	if (lineNum >= 1 && lineNum <= 3)
+	if (lineNum >= 0 && lineNum <= 2)
 	{
 		strncpy(
-			config.linkedSwitchAddress[lineNum - 1],
+			config.linkedSwitchAddress[lineNum],
 			linkedAddress.c_str(),
 			LINKED_SWITCH_ADDR_LEN);
 
-		config.linkedSwitchLine[lineNum - 1] = linkedLineNum;
+		config.linkedSwitchLine[lineNum] = linkedLineNum;
 
 		saveConfiguration();
 		gd->switchServer->send(200, "application/json",
@@ -176,7 +176,7 @@ void HandleHTTPSetLinkedSwitch()
 	}
 }
 
-// GET /CheckFirmwareUpdates
+// HTTP GET /CheckFirmwareUpdates
 void HandleHTTPCheckFirmwareUpdates()
 {
 	// Warning: uses global data
@@ -379,8 +379,8 @@ void setup()
 	makeSureWiFiConnected();
 
 	gd->switchServer->on("/Status", HTTPMethod::HTTP_GET, HandleHTTPGetStatus);
-	gd->switchServer->on(CHANGE_LINE_METHOD, HTTPMethod::HTTP_PUT, HandleHTTPChangeLine);
-	gd->switchServer->on("/SetLinkedSwitch", HTTPMethod::HTTP_PUT, HandleHTTPSetLinkedSwitch);
+	gd->switchServer->on(CHANGE_LINE_METHOD, HTTPMethod::HTTP_GET, HandleHTTPChangeLine);
+	gd->switchServer->on("/SetLinkedSwitch", HTTPMethod::HTTP_GET, HandleHTTPSetLinkedSwitch);
 	gd->switchServer->on("/CheckFirmwareUpdates", HTTPMethod::HTTP_GET, HandleHTTPCheckFirmwareUpdates);
 
 	// Switch pins          Power pins
