@@ -1,7 +1,7 @@
-import React, { Component } from 'react';
-import ReactDOM from 'react-dom';
-import { PageHeader } from 'react-bootstrap';
-import { Button } from 'react-bootstrap';
+import React, { Component } from 'react';	// eslint-disable-line no-unused-vars
+import ReactDOM from 'react-dom';		// eslint-disable-line no-unused-vars
+import { PageHeader } from 'react-bootstrap';	// eslint-disable-line no-unused-vars
+import { Button } from 'react-bootstrap';	// eslint-disable-line no-unused-vars
 
 export default class Lighting extends Component {
 
@@ -12,7 +12,7 @@ export default class Lighting extends Component {
 
 	render() {
 		return (
-		 	<div>
+			<div>
 				<PageHeader>Освещение</PageHeader>
 				Коридор 1:
 
@@ -75,7 +75,6 @@ export default class Lighting extends Component {
 	loadData() {
 		fetch('http://192.168.1.210/Status', { mode: 'cors'  })
 			.then(responce => responce.json())
-//			.then(json => { this.setState({ sw: [json, this.state.sw[1], this.state.sw[2]] }) })
 			.then(status => {
 				var nsw = this.state.sw.slice();
 				nsw[0] = status;

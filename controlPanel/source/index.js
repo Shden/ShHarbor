@@ -1,13 +1,13 @@
-import React from 'react';					// eslint-disable-line no-unused-vars
+import React from 'react';						// eslint-disable-line no-unused-vars
 import ReactDOM from 'react-dom';
-import { HashRouter, Link, Route, Switch } from 'react-router-dom';
+import { HashRouter, Link, Route, Switch } from 'react-router-dom';	// eslint-disable-line no-unused-vars
 
-import { Navbar, Nav, NavItem } from 'react-bootstrap';		// eslint-disable-line no-unused-vars
-import { PageHeader } from 'react-bootstrap';			// eslint-disable-line no-unused-vars
-import { Grid, Row, Col } from 'react-bootstrap';		// eslint-disable-line no-unused-vars
+import { Navbar, Nav, NavItem } from 'react-bootstrap';			// eslint-disable-line no-unused-vars
+import { PageHeader } from 'react-bootstrap';				// eslint-disable-line no-unused-vars
+import { Grid, Row, Col } from 'react-bootstrap';			// eslint-disable-line no-unused-vars
 import Lighting from './lighting.js';
 
-const App = () => (
+const App = () => ( // eslint-disable-line no-unused-vars
 	<div>
 		<Navbar inverse>
 			<Navbar.Header>
