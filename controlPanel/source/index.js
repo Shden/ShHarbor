@@ -6,6 +6,7 @@ import { Navbar, Nav, NavItem } from 'react-bootstrap';			// eslint-disable-line
 import { PageHeader } from 'react-bootstrap';				// eslint-disable-line no-unused-vars
 import { Grid, Row, Col } from 'react-bootstrap';			// eslint-disable-line no-unused-vars
 import Lighting from './lighting.js';
+import Heating from './heating.js';
 
 const App = () => ( // eslint-disable-line no-unused-vars
 	<div>
@@ -18,8 +19,9 @@ const App = () => ( // eslint-disable-line no-unused-vars
 			</Navbar.Header>
 			<Navbar.Collapse>
 				<Nav>
-					<NavItem eventKey={1}><Link to="light">Освещение</Link></NavItem>
-					<NavItem eventKey={2}><Link to="about">О системе</Link></NavItem>
+					<NavItem><Link to="lighting">Освещение</Link></NavItem>
+					<NavItem><Link to="heating">Климат</Link></NavItem>
+					<NavItem><Link to="about">О системе</Link></NavItem>
 				</Nav>
 			</Navbar.Collapse>
 		</Navbar>
@@ -27,7 +29,8 @@ const App = () => ( // eslint-disable-line no-unused-vars
 			<Row>
 				<Col xs={12} md={12}>
 					<Switch>
-						<Route path='/light' component={Lighting}/>
+						<Route path='/lighting' component={Lighting}/>
+						<Route path='/heating' component={Heating}/>
 						<Route path='/about' component={About}/>
 					</Switch>
 				</Col>
@@ -40,8 +43,8 @@ const About = () => (
 	<div>
 		<PageHeader>О системе</PageHeader>
 		<p>Управление всем, что поддается управлению в доме.</p>
-		<p>Версия: 0.1.</p>
-		<p>Дата: 12-11-2017.</p>
+		<p>Версия: 0.2.</p>
+		<p>Дата: 14-11-2017.</p>
 		<p>Оды, хвалебные стихи, благодарственные псалмы и если что-то не так: <a href="mailto:denis.afanassiev@gmail.com">denis.afanassiev@gmail.com</a></p>
 	</div>
 );
