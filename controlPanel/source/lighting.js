@@ -4,7 +4,7 @@ import { PageHeader } from 'react-bootstrap';		// eslint-disable-line no-unused-
 import { Button } from 'react-bootstrap';		// eslint-disable-line no-unused-vars
 import { Grid, Row, Col } from 'react-bootstrap';	// eslint-disable-line no-unused-vars
 
-class LightingSwitch extends Component {
+class LightingSwitch extends Component {		// eslint-disable-line no-unused-vars
 
 	constructor() {
 		super();

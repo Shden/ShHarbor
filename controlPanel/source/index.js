@@ -7,6 +7,7 @@ import { PageHeader } from 'react-bootstrap';				// eslint-disable-line no-unuse
 import { Grid, Row, Col } from 'react-bootstrap';			// eslint-disable-line no-unused-vars
 import Lighting from './lighting.js';
 import Heating from './heating.js';
+import { LinkContainer } from 'react-router-bootstrap';			// eslint-disable-line no-unused-vars
 
 const App = () => ( // eslint-disable-line no-unused-vars
 	<div>
@@ -19,9 +20,15 @@ const App = () => ( // eslint-disable-line no-unused-vars
 			</Navbar.Header>
 			<Navbar.Collapse>
 				<Nav>
-					<NavItem><Link to="lighting">Освещение</Link></NavItem>
-					<NavItem><Link to="heating">Климат</Link></NavItem>
-					<NavItem><Link to="about">О системе</Link></NavItem>
+					<LinkContainer to="lighting">
+						<NavItem>Освещение</NavItem>
+					</LinkContainer>
+					<LinkContainer to="heating">
+						<NavItem>Климат</NavItem>
+					</LinkContainer>
+					<LinkContainer to="about">
+						<NavItem>О системе</NavItem>
+					</LinkContainer>
 				</Nav>
 			</Navbar.Collapse>
 		</Navbar>

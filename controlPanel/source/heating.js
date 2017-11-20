@@ -4,7 +4,7 @@ import { PageHeader } from 'react-bootstrap';		// eslint-disable-line no-unused-
 import { Button } from 'react-bootstrap';		// eslint-disable-line no-unused-vars
 import { Grid, Row, Col } from 'react-bootstrap';	// eslint-disable-line no-unused-vars
 
-class RoomClimate extends Component {
+class RoomClimate extends Component { 			// eslint-disable-line no-unused-vars
 
 	constructor() {
 		super();
@@ -21,7 +21,7 @@ class RoomClimate extends Component {
 					<Col xs={6}>
 						Температура {this.state.CurrentTemperature}&deg;C,
 						настройка терморегулятора {this.state.TargetTemperature}&deg;C,
-						нагрев {this.state.Heating ? "включен" : "выключен" }.
+						нагрев {this.state.Heating ? 'включен' : 'выключен' }.
 					</Col>
 				</Row>
 			</Grid>
