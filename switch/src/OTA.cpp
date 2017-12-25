@@ -33,13 +33,14 @@ void checkForUpdates(int currentVersion, const char* fwUrlBase)
 
 		if (newVersion > currentVersion)
 		{
-			Serial.println("Preparing to update");
+			Serial.println("Preparing to update...");
 
+			// New image URL
 			String fwImageURL = fwUrlBase;
 			fwImageURL.concat("SHH-SW-");
 			fwImageURL.concat(String(newVersion));
 			fwImageURL.concat(".bin");
-			Serial.print("Firmware image URL: ");
+			Serial.print("Updating firmware using image URL: ");
 			Serial.println(fwImageURL);
 
 			t_httpUpdate_return ret = ESPhttpUpdate.update(fwImageURL);
@@ -56,10 +57,24 @@ void checkForUpdates(int currentVersion, const char* fwUrlBase)
 					Serial.println("HTTP_UPDATE_NO_UPDATES");
 					break;
 			}
+
+			// New SPIFFS URL
+			String fwSpiffsURL = fwUrlBase;
+			fwSpiffsURL.concat("SHH-SW-spiffs-");
+			fwSpiffsURL.concat(String(newVersion));
+			fwSpiffsURL.concat(".bin");
+			Serial.print("Updating SPIFFS using image URL: ");
+			Serial.println(fwSpiffsURL);
+
+			ret = ESPhttpUpdate.updateSpiffs(fwSpiffsURL);
+			if (HTTP_UPDATE_OK == ret)
+			{
+				Serial.println("SPIFFS updated.");
+			}
 		}
 		else
 		{
-			Serial.println("Already on latest version");
+			Serial.println("Already on latest version.");
 		}
 	}
 	else

@@ -22,6 +22,7 @@
 #include <ESP8266mDNS.h>
 #include <Timer.h>
 #include <OTA.h>
+#include <FS.h>
 
 #define WEB_SERVER_PORT         80
 #define CHECK_FIRMWARE_EVERY	(60000L*5)	// every 5 min
@@ -53,7 +54,7 @@
 #define O3			U5
 
 const char* fwUrlBase = "http://192.168.1.200/firmware/ShHarbor/switch/";
-const int FW_VERSION = 611;
+const int FW_VERSION = 614;
 
 void saveConfiguration();
 void checkFirmwareUpdates();
@@ -191,16 +192,6 @@ void HandleHTTPCheckFirmwareUpdates()
 		"No update available now.\r\n");
 }
 
-// HTTP GET /index.html
-void HandleHTTPGetWebUIIndex()
-{
-	// Warning: uses global data
-	ControllerData *gd = &GD;
-
-	// gd->switchServer->send_P(200, "text/html",
-	// 	(char*)index_compressed_html, index_compressed_html_len);
-}
-
 // Get character sting from terminal.
 int readString(char* buff, size_t buffSize)
 {
@@ -309,6 +300,7 @@ void makeSureWiFiConnected()
 		Serial.printf("Connected to: %s\n", config.ssid);
 		Serial.printf("IP address: %s\n", WiFi.localIP().toString().c_str());
 
+
 		if (gd->mdns->begin(MDNS_HOST, WiFi.localIP()))
 		{
 			Serial.println("MDNS responder started.");
@@ -388,13 +380,21 @@ void setup()
 
 	makeSureWiFiConnected();
 
+	if (!SPIFFS.begin())
+	{
+		Serial.println("SPIFFS mount failed.");
+	}
+	else
+	{
+		Serial.println("SPIFFS mount succesfull.");
+		//gd->switchServer->serveStatic("/img", SPIFFS, "/img");
+		gd->switchServer->serveStatic("/", SPIFFS, "/index.html");
+	}
+
 	gd->switchServer->on("/Status", HTTPMethod::HTTP_GET, HandleHTTPGetStatus);
 	gd->switchServer->on(CHANGE_LINE_METHOD, HTTPMethod::HTTP_GET, HandleHTTPChangeLine);
 	gd->switchServer->on("/SetLinkedSwitch", HTTPMethod::HTTP_GET, HandleHTTPSetLinkedSwitch);
 	gd->switchServer->on("/CheckFirmwareUpdates", HTTPMethod::HTTP_GET, HandleHTTPCheckFirmwareUpdates);
-
-	// Web UI loader
-	gd->switchServer->on("/index.html", HTTPMethod::HTTP_GET, HandleHTTPGetWebUIIndex);
 
 	// Switch pins          Power pins
 	gd->switchPins[0] = I1; gd->powerPins[0] = O1; gd->remoteControlBits[0] = 0;
