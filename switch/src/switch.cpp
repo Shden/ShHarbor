@@ -54,7 +54,7 @@
 #define O3			U5
 
 const char* fwUrlBase = "http://192.168.1.200/firmware/ShHarbor/switch/";
-const int FW_VERSION = 614;
+const int FW_VERSION = 617;
 
 void saveConfiguration();
 void checkFirmwareUpdates();
@@ -388,7 +388,7 @@ void setup()
 	{
 		Serial.println("SPIFFS mount succesfull.");
 		//gd->switchServer->serveStatic("/img", SPIFFS, "/img");
-		gd->switchServer->serveStatic("/", SPIFFS, "/index.html");
+		gd->switchServer->serveStatic("/index.html", SPIFFS, "/index.html");
 	}
 
 	gd->switchServer->on("/Status", HTTPMethod::HTTP_GET, HandleHTTPGetStatus);
