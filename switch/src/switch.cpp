@@ -25,7 +25,7 @@
 #include <FS.h>
 
 #define WEB_SERVER_PORT         80
-#define CHECK_FIRMWARE_EVERY	(60000L*5)	// every 5 min
+#define CHECK_SW_UPDATES_EVERY	(60000L*5)	// every 5 min
 #define UPDATE_POWER_EVERY	500		// every 500 ms
 #define EEPROM_INIT_CODE        28465
 #define SSID_LEN                80
@@ -54,10 +54,9 @@
 #define O3			U5
 
 const char* fwUrlBase = "http://192.168.1.200/firmware/ShHarbor/switch/";
-const int FW_VERSION = 619;
 
 void saveConfiguration();
-void checkFirmwareUpdates();
+void checkSoftwareUpdates();
 
 struct ControllerData
 {
@@ -177,15 +176,15 @@ void HandleHTTPSetLinkedSwitch()
 	}
 }
 
-// HTTP GET /CheckFirmwareUpdates
-void HandleHTTPCheckFirmwareUpdates()
+// HTTP GET /CheckSoftwareUpdates
+void HandleHTTPCheckSoftwareUpdates()
 {
 	// Warning: uses global data
 	ControllerData *gd = &GD;
 
 	gd->switchServer->send(200, "text/html",
 		"Checking new firmware availability...\r\n");
-	checkFirmwareUpdates();
+	checkSoftwareUpdates();
 
 	// if there was new version we wouldn't get here, so
 	gd->switchServer->send(200, "text/html",
@@ -308,11 +307,29 @@ void makeSureWiFiConnected()
 	}
 }
 
-// Go check if there is a new firmware version got available.
-void checkFirmwareUpdates()
+// Go check if there is a new firmware or SPIFFS got available.
+//
+// Note: ESP doesnt seem to handle one stop update of FW + SPIFFS, at least
+// it didn't work for me. I assume the update process includes upload of the
+// new image to a memory buffer then reboot when it replaces either FW or
+// SPIFFS. This effectively means that updating of both FW and SPIFFS would
+// take 2 cycles including rebooting. Thus 2 independent versions should be
+// supported, one for FW and one for SPIFFS.
+void checkSoftwareUpdates()
 {
-	// pass current FW version and base URL to lookup
-	checkForUpdates(FW_VERSION, fwUrlBase);
+	// 1. SPIFFS update
+	File versionInfo = SPIFFS.open("/version.info", "r");
+	if (versionInfo)
+	{
+		const int spiffsVersion = versionInfo.parseInt();
+		versionInfo.close();
+
+		updateSpiffs(spiffsVersion, fwUrlBase);
+	}
+
+	// 2. FW update
+	const int firmwareVersion = FW_VERSION;
+	updateFirmware(firmwareVersion, fwUrlBase);
 }
 
 // Map switch input and remote control bit to power output, fire linked changes
@@ -394,7 +411,7 @@ void setup()
 	gd->switchServer->on("/Status", HTTPMethod::HTTP_GET, HandleHTTPGetStatus);
 	gd->switchServer->on(CHANGE_LINE_METHOD, HTTPMethod::HTTP_GET, HandleHTTPChangeLine);
 	gd->switchServer->on("/SetLinkedSwitch", HTTPMethod::HTTP_GET, HandleHTTPSetLinkedSwitch);
-	gd->switchServer->on("/CheckFirmwareUpdates", HTTPMethod::HTTP_GET, HandleHTTPCheckFirmwareUpdates);
+	gd->switchServer->on("/CheckSoftwareUpdates", HTTPMethod::HTTP_GET, HandleHTTPCheckSoftwareUpdates);
 
 	// Switch pins          Power pins
 	gd->switchPins[0] = I1; gd->powerPins[0] = O1; gd->remoteControlBits[0] = 0;
@@ -405,7 +422,7 @@ void setup()
 	Serial.println("HTTP server started.");
 
 	// Set up regulars
-	gd->timer->every(CHECK_FIRMWARE_EVERY, checkFirmwareUpdates);
+	gd->timer->every(CHECK_SW_UPDATES_EVERY, checkSoftwareUpdates);
 	gd->timer->every(UPDATE_POWER_EVERY, updateLines);
 
 	// outputs

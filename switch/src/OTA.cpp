@@ -8,80 +8,87 @@
 #include <ESP8266HTTPClient.h>
 #include <ESP8266httpUpdate.h>
 
-void checkForUpdates(int currentVersion, const char* fwUrlBase)
+// Checks updates repository for the version available
+int getAvailableVersion(int currentVersion, const char* repositoryBaseUrl)
 {
-	String fwVersionURL = String(fwUrlBase);
-	fwVersionURL.concat("version.info");
+	int newVersion = currentVersion;
 
-	Serial.println("Checking for firmware updates.");
-	Serial.print("Firmware version URL: ");
-	Serial.println(fwVersionURL);
+	String versionInfoURL = String(repositoryBaseUrl);
+	versionInfoURL.concat("version.info");
+
+	Serial.print("version.info URL: ");
+	Serial.println(versionInfoURL);
 
 	HTTPClient httpClient;
-	httpClient.begin(fwVersionURL);
+	httpClient.begin(versionInfoURL);
 	int httpCode = httpClient.GET();
 	if (200 == httpCode)
 	{
 		String newFWVersion = httpClient.getString();
 
-		Serial.print("Current firmware version: ");
+		Serial.print("Current version: ");
 		Serial.println(currentVersion);
-		Serial.print("Available firmware version: ");
+		Serial.print("Available version: ");
 		Serial.println(newFWVersion);
 
-		int newVersion = newFWVersion.toInt();
+		newVersion = newFWVersion.toInt();
 
 		if (newVersion > currentVersion)
-		{
-			Serial.println("Preparing to update...");
-
-			// New SPIFFS URL
-			String fwSpiffsURL = fwUrlBase;
-			fwSpiffsURL.concat("SHH-SW-spiffs-");
-			fwSpiffsURL.concat(String(newVersion));
-			fwSpiffsURL.concat(".bin");
-			Serial.print("Updating SPIFFS using image URL: ");
-			Serial.println(fwSpiffsURL);
-
-			t_httpUpdate_return ret = ESPhttpUpdate.updateSpiffs(fwSpiffsURL);
-			if (HTTP_UPDATE_OK == ret)
-			{
-				Serial.println("SPIFFS updated.");
-			}
-
-			// New image URL
-			String fwImageURL = fwUrlBase;
-			fwImageURL.concat("SHH-SW-");
-			fwImageURL.concat(String(newVersion));
-			fwImageURL.concat(".bin");
-			Serial.print("Updating firmware using image URL: ");
-			Serial.println(fwImageURL);
-
-			// this will reboot upon succesfull update!
-			ret = ESPhttpUpdate.update(fwImageURL);
-
-			switch(ret)
-			{
-				case HTTP_UPDATE_FAILED:
-					Serial.printf("HTTP_UPDATE_FAILD Error (%d): %s",
-						ESPhttpUpdate.getLastError(),
-						ESPhttpUpdate.getLastErrorString().c_str());
-					break;
-
-				case HTTP_UPDATE_NO_UPDATES:
-					Serial.println("HTTP_UPDATE_NO_UPDATES");
-					break;
-			}
-		}
+			Serial.println("New version available.");
 		else
-		{
 			Serial.println("Already on latest version.");
-		}
 	}
 	else
 	{
-		Serial.print("Firmware version check failed, got HTTP response code: ");
+		Serial.print("Version check failed, got HTTP response code: ");
 		Serial.println( httpCode );
 	}
 	httpClient.end();
+	return newVersion;
+}
+
+void handeUpdateResult(t_httpUpdate_return updateReturnCode)
+{
+	switch(updateReturnCode)
+	{
+		case HTTP_UPDATE_FAILED:
+			Serial.printf("HTTP_UPDATE_FAILD Error (%d): %s",
+				ESPhttpUpdate.getLastError(),
+				ESPhttpUpdate.getLastErrorString().c_str());
+			break;
+
+		case HTTP_UPDATE_NO_UPDATES:
+			Serial.println("HTTP_UPDATE_NO_UPDATES");
+			break;
+	}
+}
+
+void updateFirmware(int currentVersion, const char* repositoryBaseUrl)
+{
+	Serial.println("Firmware update check.");
+	if (currentVersion < getAvailableVersion(currentVersion, repositoryBaseUrl))
+	{
+		// New firmware URL
+		String newFirmwareURL = repositoryBaseUrl;
+		newFirmwareURL.concat("SHH-SW-FW.bin");
+		Serial.print("Updating SPIFFS using image URL: ");
+		Serial.println(newFirmwareURL);
+
+		handeUpdateResult(ESPhttpUpdate.update(newFirmwareURL));
+	}
+}
+
+void updateSpiffs(int currentVersion, const char* repositoryBaseUrl)
+{
+	Serial.println("SPIFFS update check.");
+	if (currentVersion < getAvailableVersion(currentVersion, repositoryBaseUrl))
+	{
+		// New SPIFFS URL
+		String newSpiffsURL = repositoryBaseUrl;
+		newSpiffsURL.concat("SHH-SW-SPIFFS.bin");
+		Serial.print("Updating SPIFFS using image URL: ");
+		Serial.println(newSpiffsURL);
+
+		handeUpdateResult(ESPhttpUpdate.updateSpiffs(newSpiffsURL));
+	}
 }
