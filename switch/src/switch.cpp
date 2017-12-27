@@ -227,7 +227,7 @@ void saveConfiguration()
 	EEPROM.end();
 }
 
-// Get configuration data interactively and save to EEPROM.
+// Get configuration data interactively from serial TTY and save to EEPROM.
 void getUserConfiguration()
 {
 	// Ask user for config values
@@ -326,6 +326,8 @@ void checkSoftwareUpdates()
 
 		updateSpiffs(spiffsVersion, fwUrlBase);
 	}
+	else
+		updateSpiffs(0, fwUrlBase);
 
 	// 2. FW update
 	const int firmwareVersion = FW_VERSION;
@@ -379,6 +381,54 @@ void updateLines()
 		updateLine(i);
 }
 
+// Returns content type based on @filename extension.
+String getContentType(String filename)
+{
+	/*if (server.hasArg("download")) return "application/octet-stream";
+	else */if (filename.endsWith(".htm")) return "text/html";
+	else if (filename.endsWith(".html")) return "text/html";
+	else if (filename.endsWith(".css")) return "text/css";
+	else if (filename.endsWith(".js")) return "application/javascript";
+	else if (filename.endsWith(".png")) return "image/png";
+	else if (filename.endsWith(".gif")) return "image/gif";
+	else if (filename.endsWith(".jpg")) return "image/jpeg";
+	else if (filename.endsWith(".ico")) return "image/x-icon";
+	else if (filename.endsWith(".xml")) return "text/xml";
+	else if (filename.endsWith(".pdf")) return "application/x-pdf";
+	else if (filename.endsWith(".zip")) return "application/x-zip";
+	else if (filename.endsWith(".gz")) return "application/x-gzip";
+	return "text/plain";
+}
+
+// Checks SPIFFS for the file requested and handles file streaming if exists.
+void handleSPIFFSFileRead()
+{
+	// Warning: uses global data
+	ControllerData *gd = &GD;
+
+	String path = gd->switchServer->uri();
+	Serial.println("handleFileRead: " + path);
+
+	if (path.endsWith("/"))
+		path += "index.html";
+
+	String contentType = getContentType(path);
+	String pathWithGz = path + ".gz";
+	if (SPIFFS.exists(pathWithGz) || SPIFFS.exists(path))
+	{
+		if (SPIFFS.exists(pathWithGz))
+		{
+			Serial.println("Using GZIP version: " + pathWithGz);
+			path = pathWithGz;
+			gd->switchServer->sendHeader("Content-Encoding", "gzip");
+		}
+		File spiffsFile = SPIFFS.open(path, "r");
+		gd->switchServer->streamFile(spiffsFile, contentType);
+		spiffsFile.close();
+	}
+	gd->switchServer->send(404, "text/plain", "File not found.");
+}
+
 void setup()
 {
 	Serial.begin(115200);
@@ -397,21 +447,19 @@ void setup()
 
 	makeSureWiFiConnected();
 
-	if (!SPIFFS.begin())
-	{
-		Serial.println("SPIFFS mount failed.");
-	}
-	else
-	{
+	if (SPIFFS.begin())
 		Serial.println("SPIFFS mount succesfull.");
-		//gd->switchServer->serveStatic("/img", SPIFFS, "/img");
-		gd->switchServer->serveStatic("/index.html", SPIFFS, "/index.html");
-	}
+	else
+		Serial.println("SPIFFS mount failed.");
 
 	gd->switchServer->on("/Status", HTTPMethod::HTTP_GET, HandleHTTPGetStatus);
 	gd->switchServer->on(CHANGE_LINE_METHOD, HTTPMethod::HTTP_GET, HandleHTTPChangeLine);
 	gd->switchServer->on("/SetLinkedSwitch", HTTPMethod::HTTP_GET, HandleHTTPSetLinkedSwitch);
 	gd->switchServer->on("/CheckSoftwareUpdates", HTTPMethod::HTTP_GET, HandleHTTPCheckSoftwareUpdates);
+
+	//called when the url is not defined here to load content from SPIFFS
+	gd->switchServer->onNotFound(handleSPIFFSFileRead);
+
 
 	// Switch pins          Power pins
 	gd->switchPins[0] = I1; gd->powerPins[0] = O1; gd->remoteControlBits[0] = 0;
