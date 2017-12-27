@@ -94,11 +94,11 @@ void HandleHTTPGetStatus()
 		if (i < SW_LINES - 1)
 			json += String(",");
 		else
-			json += String(" ]");
+			json += String(" ], ");
 		json += String("\n\r");
 	}
 
-	json += String(", \"Build\" : ") + String(FW_VERSION) + " }\n\r";
+	json += String("\"Build\" : ") + String(FW_VERSION) + " }\n\r";
 
 	gd->switchServer->send(200, "application/json", json);
 }
@@ -187,6 +187,7 @@ void HandleHTTPCheckSoftwareUpdates()
 	checkSoftwareUpdates();
 
 	// if there was new version we wouldn't get here, so
+	// TODO: this never works as the connection seems to be closed already.
 	gd->switchServer->send(200, "text/html",
 		"No update available now.\r\n");
 }
@@ -367,7 +368,7 @@ void updateLine(int lineNumber)
 
 			HTTPClient httpClient;
 			httpClient.begin(changeLinkedLineURL);
-			int httpCode = httpClient.sendRequest("PUT");
+			int httpCode = httpClient.sendRequest("GET");
 			Serial.printf("Responce code: %d\n", httpCode);
 			httpClient.end();
 		}

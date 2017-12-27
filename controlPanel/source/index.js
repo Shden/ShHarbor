@@ -27,7 +27,7 @@ const App = () => ( // eslint-disable-line no-unused-vars
 						<NavItem>Климат</NavItem>
 					</LinkContainer>
 					<LinkContainer to="about">
-						<NavItem>О системе</NavItem>
+						<NavItem>Что это?</NavItem>
 					</LinkContainer>
 				</Nav>
 			</Navbar.Collapse>
@@ -48,10 +48,12 @@ const App = () => ( // eslint-disable-line no-unused-vars
 
 const About = () => (
 	<div>
-		<PageHeader>О системе</PageHeader>
-		<p>Управление всем, что поддается управлению в доме.</p>
-		<p>Версия: 0.2.</p>
-		<p>Дата: 14-11-2017.</p>
+		<PageHeader>Для чего это все</PageHeader>
+		<p>Эта система управляет всем тем, что поддается управлению в доме.
+		Пока что это разные лампочки и отопительные приборы, планы на
+		будущее обширны.</p>
+		<p>Версия: 0.3.</p>
+		<p>Дата: 27-12-2017.</p>
 		<p>Оды, хвалебные стихи, благодарственные псалмы и если что-то не так: <a href="mailto:denis.afanassiev@gmail.com">denis.afanassiev@gmail.com</a></p>
 	</div>
 );

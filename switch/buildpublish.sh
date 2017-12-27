@@ -2,6 +2,8 @@
 BUILD_DIR=~/ShHarbor/switch/.pioenvs/esp12
 PUBLISH_DIR=~/Shden/shweb/firmware/ShHarbor/switch
 
+cp ../controlPanel/build/controlPanelApp.js.gz data/build/
+
 ~/.platformio/penv/bin/pio run
 ~/.platformio/penv/bin/pio run -t buildfs
 
