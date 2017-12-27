@@ -420,7 +420,7 @@ void handleSPIFFSFileRead()
 		{
 			Serial.println("Using GZIP version: " + pathWithGz);
 			path = pathWithGz;
-			gd->switchServer->sendHeader("Content-Encoding", "gzip");
+			//gd->switchServer->sendHeader("Content-Encoding", "gzip");
 		}
 		File spiffsFile = SPIFFS.open(path, "r");
 		gd->switchServer->streamFile(spiffsFile, contentType);

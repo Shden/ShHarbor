@@ -3,3 +3,5 @@
 .gcc-flags.json
 .piolibdeps
 .buildnumber
+data/build
+data/index.html
