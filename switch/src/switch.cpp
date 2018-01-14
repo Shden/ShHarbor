@@ -7,6 +7,7 @@
 	- Wall mounted switches support.
 	- Multiple linked switches.
 	- OTA firmware update.
+	- Built in web UI to control switch settings.
 
 	Toolchain: PlatformIO.
 
@@ -300,7 +301,6 @@ void makeSureWiFiConnected()
 		Serial.printf("Connected to: %s\n", config.ssid);
 		Serial.printf("IP address: %s\n", WiFi.localIP().toString().c_str());
 
-
 		if (gd->mdns->begin(MDNS_HOST, WiFi.localIP()))
 		{
 			Serial.println("MDNS responder started.");
@@ -460,7 +460,6 @@ void setup()
 
 	//called when the url is not defined here to load content from SPIFFS
 	gd->switchServer->onNotFound(handleSPIFFSFileRead);
-
 
 	// Switch pins          Power pins
 	gd->switchPins[0] = I1; gd->powerPins[0] = O1; gd->remoteControlBits[0] = 0;

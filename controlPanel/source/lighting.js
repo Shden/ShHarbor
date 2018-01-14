@@ -90,7 +90,7 @@ export default class Lighting extends Component {
 			<div>
 				<PageHeader>Освещение</PageHeader>
 				<LightingSwitch name="Коридор центр" address="192.168.1.210" num="0" />
-				<LightingSwitch name="Коридор к двери" address="192.168.1.212" num="0" />
+				<LightingSwitch name="Коридор ко входной двери" address="192.168.1.212" num="0" />
 			</div>
 		);
 	}

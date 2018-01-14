@@ -27,11 +27,11 @@
 #define WEB_SERVER_PORT         80
 #define UPDATE_TEMP_EVERY       (5000L)         // every 5 sec
 #define CHECK_HEATING_EVERY     (60000L)        // every 1 min
-#define CHECK_FIRMWARE_EVERY	(60000L*5)	// every 5 min
+#define CHECK_SW_UPDATES_EVERY	(60000L*5)	// every 5 min
 #define EEPROM_INIT_CODE        28465
 #define SSID_LEN                80
 #define SECRET_LEN              80
-#define DEFAULT_FLOOR_TEMP      28.0
+#define DEFAULT_TARGET_TEMP	28.0
 #define DEFAULT_ACTIVE		0
 #define MDNS_HOST               "HB-THERMOSTAT"
 
@@ -39,6 +39,7 @@ const char* fwUrlBase = "http://192.168.1.200/firmware/ShHarbor/thermostat/";
 const int FW_VERSION = 814;
 
 void saveConfiguration();
+void checkSoftwareUpdates();
 
 struct ControllerData
 {
@@ -204,7 +205,7 @@ void getUserConfiguration()
 	readString(config.secret, SECRET_LEN);
 
 	// Defaults
-	config.targetTemp = DEFAULT_FLOOR_TEMP;
+	config.targetTemp = DEFAULT_TARGET_TEMP;
 	config.active = DEFAULT_ACTIVE;
 
 	// Initisalised flag
@@ -274,10 +275,11 @@ void makeSureWiFiConnected()
 }
 
 // Go check if there is a new firmware version got available.
-void checkFirmwareUpdates()
+void checkSoftwareUpdates()
 {
 	// pass current FW version and base URL to lookup
-	checkForUpdates(FW_VERSION, fwUrlBase);
+	const int firmwareVersion = FW_VERSION;
+	updateFirmware(firmwareVersion, fwUrlBase);
 }
 
 void setup()
@@ -309,7 +311,7 @@ void setup()
 	// Set up regulars
 	gd->timer->every(UPDATE_TEMP_EVERY, temperatureUpdate);
 	gd->timer->every(CHECK_HEATING_EVERY, controlHeating);
-	gd->timer->every(CHECK_FIRMWARE_EVERY, checkFirmwareUpdates);
+	gd->timer->every(CHECK_SW_UPDATES_EVERY, checkSoftwareUpdates);
 
 	pinMode(AC_CONTROL_PIN, OUTPUT);
 }
