@@ -39,8 +39,6 @@ void getWiFiConfigurationTTY(ConnectedESPConfiguration* configuration)
 
 	// Defaults
 	strncpy(configuration->MDNSHost, "ESP" + ESP.getChipId(), MDNS_HOST_LEN);
-	// config.targetTemp = DEFAULT_TARGET_TEMP;
-	// config.active = DEFAULT_ACTIVE;
 
 	// Initisalised flag
 	configuration->initialised = EEPROM_INIT_CODE;

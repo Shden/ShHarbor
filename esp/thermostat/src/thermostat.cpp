@@ -6,6 +6,7 @@
 	- AC 220V power control.
 	- REST API to monitor/contol heating parameters.
 	- OTA firmware update.
+	- Built in configuration web UI at /config
 
 	Toolchain: PlatformIO.
 
@@ -177,11 +178,18 @@ void HandleConfig()
 		mapConfigParameters);
 }
 
-// Go check if there is a new firmware version got available.
+// Go check if there is a new firmware or SPIFFS got available.
 void checkSoftwareUpdates()
 {
-	// pass current FW version and base URL to lookup
-	updateFirmware(FW_VERSION, FW_URL_BASE);
+	int spiffsVersion = 0;
+	File versionInfo = SPIFFS.open("/version.info", "r");
+	if (versionInfo)
+	{
+		spiffsVersion = versionInfo.parseInt();
+		versionInfo.close();
+	}
+
+	updateAll(FW_VERSION, spiffsVersion, FW_URL_BASE);
 }
 
 void setup()

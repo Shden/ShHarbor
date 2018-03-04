@@ -52,7 +52,7 @@
 #define O2			U4
 #define O3			U5
 
-const char* fwUrlBase = "http://Den-MBP.local/firmware/ShHarbor/switch/";
+const char* FW_URL_BASE = "http://Den-MBP.local/firmware/ShHarbor/switch/";
 
 void checkSoftwareUpdates();
 
@@ -189,30 +189,17 @@ void HandleHTTPCheckSoftwareUpdates()
 }
 
 // Go check if there is a new firmware or SPIFFS got available.
-//
-// Note: ESP doesnt seem to handle one stop update of FW + SPIFFS, at least
-// it didn't work for me. I assume the update process includes upload of the
-// new image to a memory buffer then reboot when it replaces either FW or
-// SPIFFS. This effectively means that updating of both FW and SPIFFS would
-// take 2 cycles including rebooting. Thus 2 independent versions should be
-// supported, one for FW and one for SPIFFS.
 void checkSoftwareUpdates()
 {
-	// 1. SPIFFS update
+	int spiffsVersion = 0;
 	File versionInfo = SPIFFS.open("/version.info", "r");
 	if (versionInfo)
 	{
-		const int spiffsVersion = versionInfo.parseInt();
+		spiffsVersion = versionInfo.parseInt();
 		versionInfo.close();
-
-		updateSpiffs(spiffsVersion, fwUrlBase);
 	}
-	else
-		updateSpiffs(0, fwUrlBase);
 
-	// 2. FW update
-	const int firmwareVersion = FW_VERSION;
-	updateFirmware(firmwareVersion, fwUrlBase);
+	updateAll(FW_VERSION, spiffsVersion, FW_URL_BASE);
 }
 
 // Map switch input and remote control bit to power output, fire linked changes

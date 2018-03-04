@@ -70,7 +70,7 @@ void updateFirmware(int currentVersion, const char* repositoryBaseUrl)
 	{
 		// New firmware URL
 		String newFirmwareURL = repositoryBaseUrl;
-		newFirmwareURL.concat("SHH-SW-FW.bin");
+		newFirmwareURL.concat("FW.bin");
 		Serial.print("Updating SPIFFS using image URL: ");
 		Serial.println(newFirmwareURL);
 
@@ -85,10 +85,24 @@ void updateSpiffs(int currentVersion, const char* repositoryBaseUrl)
 	{
 		// New SPIFFS URL
 		String newSpiffsURL = repositoryBaseUrl;
-		newSpiffsURL.concat("SHH-SW-SPIFFS.bin");
+		newSpiffsURL.concat("SPIFFS.bin");
 		Serial.print("Updating SPIFFS using image URL: ");
 		Serial.println(newSpiffsURL);
 
 		handeUpdateResult(ESPhttpUpdate.updateSpiffs(newSpiffsURL));
 	}
+}
+
+// Go check if there is a new firmware or SPIFFS got available.
+//
+// Note: ESP doesnt seem to handle one stop update of FW + SPIFFS, at least
+// it didn't work for me. I assume the update process includes upload of the
+// new image to a memory buffer then reboot when it replaces either FW or
+// SPIFFS. This effectively means that updating of both FW and SPIFFS would
+// take 2 cycles including rebooting. Thus 2 independent versions should be
+// supported, one for FW and one for SPIFFS.
+void updateAll(int firmwareVersion, int spiffsVersion, const char* repositoryBaseUrl)
+{
+	updateSpiffs(spiffsVersion, repositoryBaseUrl);
+	updateFirmware(firmwareVersion, repositoryBaseUrl);
 }
