@@ -167,16 +167,108 @@ String mapConfigParameters(const String& key)
 	if (key == "ACTIV") return String(config.active);
 }
 
-// Handles HTTP GET /config.html request
-void HandleConfig()
+// Debug request arguments printout.
+void dbgPostPrintout()
 {
 	// Warning: uses global data
 	ControllerData *gd = &GD;
+
+	for (int i=0; i < gd->thermostatServer->args(); i++)
+	{
+		Serial.print(gd->thermostatServer->argName(i));
+		Serial.print(": ");
+		Serial.print(gd->thermostatServer->arg(i));
+		Serial.println();
+	}
+}
+
+// Handles HTTP GET /config.html request
+void UpdateConfig()
+{
+	dbgPostPrintout();
+
+	// Warning: uses global data
+	ControllerData *gd = &GD;
+
+	// NETWORK_UPDATE
+	if (gd->thermostatServer->hasArg("NETWORK_UPDATE"))
+	{
+		gd->thermostatServer->arg("SSID").toCharArray(config.ssid, SSID_LEN);
+		gd->thermostatServer->arg("PASS").toCharArray(config.secret, SECRET_LEN);
+		gd->thermostatServer->arg("MDNS").toCharArray(config.MDNSHost, MDNS_HOST_LEN);
+
+		saveConfiguration(&config);
+
+		// redirect to the same page without arguments
+		gd->thermostatServer->sendHeader("Location", String("/config"), true);
+		gd->thermostatServer->send(302, "text/plain", "");
+
+		WiFi.disconnect();
+	}
+
+	// HEATING_UPDATE
+	if (gd->thermostatServer->hasArg("HEATING_UPDATE"))
+	{
+		String param = gd->thermostatServer->arg("T_TEMP");
+		float temperature = param.toFloat();
+		if (temperature > 0.0 && temperature < 100.0)
+			config.targetTemp = temperature;
+
+		config.active = gd->thermostatServer->hasArg("ACTIVE");
+
+		saveConfiguration(&config);
+	}
 
 	ESPTemplateProcessor(*gd->thermostatServer).send(
 		String("/config.html"),
 		mapConfigParameters);
 }
+
+// // Handle network parameters update, requires reboot after update.
+// void UpdateNetworkSetup()
+// {
+// 	dbgPostPrintout();
+//
+// 	// Warning: uses global data
+// 	ControllerData *gd = &GD;
+//
+// 	gd->thermostatServer->arg("SSID").toCharArray(config.ssid, SSID_LEN);
+// 	gd->thermostatServer->arg("PASS").toCharArray(config.secret, SECRET_LEN);
+// 	gd->thermostatServer->arg("MDNS").toCharArray(config.MDNSHost, MDNS_HOST_LEN);
+//
+// 	saveConfiguration(&config);
+//
+// 	const char* msg = "Configuration updated, restarting...";
+// 	Serial.println(msg);
+// 	gd->thermostatServer->send(200, "text/html", msg);
+//
+// 	ESP.restart();
+// }
+//
+// void UpdateHeatingSetup()
+// {
+// 	dbgPostPrintout();
+//
+// 	// Warning: uses global data
+// 	ControllerData *gd = &GD;
+//
+// 	String param = gd->thermostatServer->arg("T_TEMP");
+// 	float temperature = param.toFloat();
+// 	if (temperature > 0.0 && temperature < 100.0)
+// 	{
+// 		config.targetTemp = temperature;
+// 		saveConfiguration(&config);
+// 		// gd->thermostatServer->send(200, "application/json",
+// 		// 	"Updated to: " + param + "\r\n");
+// 	}
+// 	// else
+// 	// {
+// 	// 	gd->thermostatServer->send(401, "text/html",
+// 	// 		"Wrong value: " + param + "\r\n");
+// 	// }
+//
+// 	GetConfigForm();
+// }
 
 // Go check if there is a new firmware or SPIFFS got available.
 void checkSoftwareUpdates()
@@ -196,7 +288,7 @@ void setup()
 {
 	Serial.begin(115200);
 	Serial.println("Initialisation.");
-	Serial.printf("Bath floor controller build %d.\n", FW_VERSION);
+	Serial.printf("Thermostat build %d.\n", FW_VERSION);
 
 	Serial.println("Configuration loading.");
 	loadConfiguration(&config);
@@ -211,10 +303,15 @@ void setup()
 
 	makeSureWiFiConnected(&config, gd->mdns);
 
+	if (SPIFFS.begin())
+		Serial.println("SPIFFS mount succesfull.");
+	else
+		Serial.println("SPIFFS mount failed.");
+
 	gd->thermostatServer->on("/Status", HTTPMethod::HTTP_GET, HandleHTTPGetStatus);
 	gd->thermostatServer->on("/TargetTemperature", HTTPMethod::HTTP_PUT, HandleHTTPTargetTemperature);
 	gd->thermostatServer->on("/Active", HTTPMethod::HTTP_PUT, HandleHTTPActive);
-	gd->thermostatServer->on("/config", HTTPMethod::HTTP_GET, HandleConfig);
+	gd->thermostatServer->on("/config", UpdateConfig);
 
 	gd->thermostatServer->begin();
 	Serial.println("HTTP server started.");

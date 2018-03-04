@@ -11,43 +11,43 @@
 			<br>
 			<h1>Network setup</h1>
 			<hr>
-			<form>
+			<form method="POST">
 				<div class="form-row">
 					<div class="form-group col-md-6">
 						<label for="ssid">SSID</label>
-						<input type="ssid" class="form-control" id="ssid" value="%SSID%" placeholder="SSID">
+						<input type="ssid" class="form-control" name="SSID" value="%SSID%" placeholder="SSID">
 					</div>
 					<div class="form-group col-md-6">
 						<label for="inputPassword">Password</label>
-						<input type="password" class="form-control" id="inputPassword" value="%PASS%" placeholder="Password">
+						<input type="password" class="form-control" name="PASS" value="%PASS%" placeholder="Password">
 					</div>
 				</div>
 				<div class="form-group">
 					<label for="mDNS">mDNS Name</label>
-					<input type="text" class="form-control" id="mDNS" value="%MDNS%" placeholder="mDNS Name">
+					<input type="text" class="form-control" name="MDNS" value="%MDNS%" placeholder="mDNS Name">
 				</div>
 				<div class="form-group">
 					<label for="IP">IP address</label>
-					<input type="text" class="form-control" id="IP" value="%IP%" readonly>
+					<input type="text" class="form-control" name="IP" value="%IP%" readonly>
 				</div>
-				<button type="submit" class="btn btn-danger">Update network configuration and reconnect</button>
+				<button type="submit" name="NETWORK_UPDATE" class="btn btn-danger">Update network configuration and reconnect</button>
 			</form>
 			<br>
 			<h1>Heating setup</h1>
 			<hr>
-			<form>
+			<form method="POST">
 				<div class="form-group">
 					<label for="temperature">Target temperature, &deg;C</label>
-					<input type="text" class="form-control" id="temperature" value="%T_TEMP%" placeholder="Target temperature">
+					<input type="text" class="form-control" name="T_TEMP" value="%T_TEMP%" placeholder="Target temperature">
 				</div>
 				<div class="form-check">
-					<input class="form-check-input" type="checkbox" value="%ACTIV%" id="active">
+					<input class="form-check-input" type="checkbox" value="%ACTIV%" name="ACTIVE">
 					<label class="form-check-label" for="active">
 						Thermostat is active
 					</label>
 				</div>
 				<br>
-				<button type="submit" class="btn btn-primary">Update heating configuration</button>
+				<button type="submit" name="HEATING_UPDATE" class="btn btn-primary">Update heating configuration</button>
 			</form>
 		</div>
 	</div>
