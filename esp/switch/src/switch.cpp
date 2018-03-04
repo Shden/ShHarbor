@@ -22,18 +22,16 @@
 #include <ESP8266HTTPClient.h>
 #include <ESP8266mDNS.h>
 #include <Timer.h>
-#include <OTA.h>
 #include <FS.h>
+#include "OTA.h"
+#include "config.h"
+#include "wifi.h"
 
 #define WEB_SERVER_PORT         80
 #define CHECK_SW_UPDATES_EVERY	(60000L*5)	// every 5 min
 #define UPDATE_POWER_EVERY	500		// every 500 ms
-#define EEPROM_INIT_CODE        28465
-#define SSID_LEN                80
-#define SECRET_LEN              80
 #define LINKED_SWITCH_ADDR_LEN	80
 #define SW_LINES		3
-#define MDNS_HOST               "HB-SWITCH"
 #define CHANGE_LINE_METHOD	"/ChangeLine"
 
 // ESP-12 pins:
@@ -54,9 +52,8 @@
 #define O2			U4
 #define O3			U5
 
-const char* fwUrlBase = "http://192.168.1.200/firmware/ShHarbor/switch/";
+const char* fwUrlBase = "http://Den-MBP.local/firmware/ShHarbor/switch/";
 
-void saveConfiguration();
 void checkSoftwareUpdates();
 
 struct ControllerData
@@ -69,11 +66,9 @@ struct ControllerData
 	int 			powerPins[SW_LINES];		// power pins by channels
 } GD;
 
-struct ConfigurationData
+// will have ssid, secret, initialised, MDNSHost plus what is defined here
+struct ConfigurationData : ConnectedESPConfiguration
 {
-	int16_t                 initialised;
-	char                    ssid[SSID_LEN + 1];
-	char                    secret[SECRET_LEN + 1];
 	char			linkedSwitchAddress[SW_LINES][LINKED_SWITCH_ADDR_LEN + 1];
 	int			linkedSwitchLine[SW_LINES];
 } config;
@@ -165,7 +160,7 @@ void HandleHTTPSetLinkedSwitch()
 
 		config.linkedSwitchLine[lineNum] = linkedLineNum;
 
-		saveConfiguration();
+		saveConfiguration(&config);
 		gd->switchServer->send(200, "application/json",
 			"Updated to: " + linkedAddress +
 			" and line: " + linkedLine + "\r\n");
@@ -191,121 +186,6 @@ void HandleHTTPCheckSoftwareUpdates()
 	// TODO: this never works as the connection seems to be closed already.
 	gd->switchServer->send(200, "text/html",
 		"No update available now.\r\n");
-}
-
-// Get character sting from terminal.
-int readString(char* buff, size_t buffSize)
-{
-	memset(buff, '\0', buffSize);
-
-	size_t count = 0;
-	while (count < buffSize)
-	{
-		if (Serial.available())
-		{
-			char c = Serial.read();
-			if (isprint(c))
-			{
-				buff[count++] = c;
-				Serial.print(c);
-			}
-			else if (count > 0 && (c == '\r' || c == '\n'))
-			{
-				Serial.println();
-				return 1;
-			}
-		}
-		yield();
-	}
-	return 0; // reached end of buffer
-}
-
-// Save controller configuration to EEPROM
-void saveConfiguration()
-{
-	EEPROM.begin(sizeof(config));
-	EEPROM.put(0, config);
-	EEPROM.commit();
-	EEPROM.end();
-}
-
-// Get configuration data interactively from serial TTY and save to EEPROM.
-void getUserConfiguration()
-{
-	// Ask user for config values
-	Serial.print("SSID: ");
-	readString(config.ssid, SSID_LEN);
-	Serial.print("Secret: ");
-	readString(config.secret, SECRET_LEN);
-
-	// Defaults
-	for (int i=0; i<SW_LINES; i++)
-		config.linkedSwitchAddress[i][0] = '\0';
-
-	// Initisalised flag
-	config.initialised = EEPROM_INIT_CODE;
-
-	// And put it back to EEPROM for the next time
-	saveConfiguration();
-
-	Serial.println("Restarting...");
-	ESP.restart();
-}
-
-// Getting configuration either from EEPROM or from console.
-void loadConfiguration()
-{
-	// Read what's in EEPROM
-	EEPROM.begin(sizeof(config));
-	EEPROM.get(0, config);
-	EEPROM.end();
-
-	// // Debug:
-	// Serial.printf("SSID configured: %s\n", config.ssid);
-	// Serial.printf("Secret conigured: %s\n", config.secret);
-
-	// Check if it has a proper signature
-	Serial.println("Press any key to start configuration...");
-	if (EEPROM_INIT_CODE != config.initialised || Serial.readString() != "")
-	{
-		getUserConfiguration();
-	}
-	Serial.printf("SSID to connect: %s\n", config.ssid);
-}
-
-// Either WiFi is connected or restart.
-void makeSureWiFiConnected()
-{
-	// Warning: uses global data
-	ControllerData *gd = &GD;
-
-	if (WL_CONNECTED != WiFi.status())
-	{
-		Serial.println("Disconnected.");
-		WiFi.begin(config.ssid, config.secret);
-		Serial.print("Connecting to WiFi hotspot: ");
-
-		// Wait for connection
-		int connectionAttempts = 0;
-		while (WiFi.status() != WL_CONNECTED)
-		{
-			delay(500);
-			Serial.print(".");
-			if (++connectionAttempts > 40)
-			{
-				Serial.println("Unable to connect.");
-				ESP.restart();
-			}
-		}
-		Serial.println();
-		Serial.printf("Connected to: %s\n", config.ssid);
-		Serial.printf("IP address: %s\n", WiFi.localIP().toString().c_str());
-
-		if (gd->mdns->begin(MDNS_HOST, WiFi.localIP()))
-		{
-			Serial.println("MDNS responder started.");
-		}
-	}
 }
 
 // Go check if there is a new firmware or SPIFFS got available.
@@ -437,7 +317,7 @@ void setup()
 	Serial.printf("Switch controller build %d.\n", FW_VERSION);
 
 	Serial.println("Configuration loading.");
-	loadConfiguration();
+	loadConfiguration(&config);
 
 	// Warning: uses global data
 	ControllerData *gd = &GD;
@@ -446,7 +326,7 @@ void setup()
 	gd->timer = new Timer();
 	gd->mdns = new MDNSResponder();
 
-	makeSureWiFiConnected();
+	makeSureWiFiConnected(&config, gd->mdns);
 
 	if (SPIFFS.begin())
 		Serial.println("SPIFFS mount succesfull.");
@@ -483,7 +363,7 @@ void loop()
 {
 	ControllerData *gd = &GD;
 
-	makeSureWiFiConnected();
+	makeSureWiFiConnected(&config, gd->mdns);
 	gd->switchServer->handleClient();
 	gd->timer->update();
 }

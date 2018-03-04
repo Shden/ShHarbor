@@ -13,14 +13,16 @@
 */
 
 #include <Arduino.h>
-#include <EEPROM.h>
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
-#include <temperatureSensor.h>
 #include <Timer.h>
+#include <DS1820.h>
 #include <OTA.h>
+#include <config.h>
+#include <wifi.h>
+#include <ESPTemplateProcessor.h>
 
 #define ONE_WIRE_PIN            5
 #define AC_CONTROL_PIN          13
@@ -28,17 +30,12 @@
 #define UPDATE_TEMP_EVERY       (5000L)         // every 5 sec
 #define CHECK_HEATING_EVERY     (60000L)        // every 1 min
 #define CHECK_SW_UPDATES_EVERY	(60000L*5)	// every 5 min
-#define EEPROM_INIT_CODE        28465
-#define SSID_LEN                80
-#define SECRET_LEN              80
 #define DEFAULT_TARGET_TEMP	28.0
 #define DEFAULT_ACTIVE		0
 #define MDNS_HOST               "HB-THERMOSTAT"
 
-const char* fwUrlBase = "http://192.168.1.200/firmware/ShHarbor/thermostat/";
-const int FW_VERSION = 814;
+const char* FW_URL_BASE = "http://Den-MBP.local/firmware/ShHarbor/thermostat/";
 
-void saveConfiguration();
 void checkSoftwareUpdates();
 
 struct ControllerData
@@ -50,11 +47,9 @@ struct ControllerData
 	uint8_t                 heatingOn;
 } GD;
 
-struct ConfigurationData
+// will have ssid, secret, initialised, MDNSHost plus what is defined here
+struct ConfigurationData : ConnectedESPConfiguration
 {
-	int16_t                 initialised;
-	char                    ssid[SSID_LEN + 1];
-	char                    secret[SECRET_LEN + 1];
 	float                   targetTemp;
 	int8_t			active;
 } config;
@@ -112,6 +107,7 @@ void HandleHTTPGetStatus()
 	"\"Build\" : " + String(FW_VERSION) +
 	" }\r\n";
 
+	gd->thermostatServer->sendHeader("Access-Control-Allow-Origin", "*");
 	gd->thermostatServer->send(200, "application/json", json);
 }
 
@@ -126,7 +122,7 @@ void HandleHTTPTargetTemperature()
 	if (temperature > 0.0 && temperature < 100.0)
 	{
 		config.targetTemp = temperature;
-		saveConfiguration();
+		saveConfiguration(&config);
 		gd->thermostatServer->send(200, "application/json",
 			"Updated to: " + param + "\r\n");
 	}
@@ -148,7 +144,7 @@ void HandleHTTPActive()
 	if (active == 0 || active == 1)
 	{
 		config.active = active;
-		saveConfiguration();
+		saveConfiguration(&config);
 		gd->thermostatServer->send(200, "application/json",
 			"Updated to: " + activeParam + "\r\n");
 	}
@@ -159,127 +155,33 @@ void HandleHTTPActive()
 	}
 }
 
-// Get character sting from terminal.
-int readString(char* buff, size_t buffSize)
+// Maps config.html parameters to configuration values.
+String mapConfigParameters(const String& key)
 {
-	memset(buff, '\0', buffSize);
-
-	size_t count = 0;
-	while (count < buffSize)
-	{
-		if (Serial.available())
-		{
-			char c = Serial.read();
-			if (isprint(c))
-			{
-				buff[count++] = c;
-				Serial.print(c);
-			}
-			else if (count > 0 && (c == '\r' || c == '\n'))
-			{
-				Serial.println();
-				return 1;
-			}
-		}
-		yield();
-	}
-	return 0; // reached end of buffer
+	if (key == "SSID") return String(config.ssid); else
+	if (key == "PASS") return String(config.secret); else
+	if (key == "MDNS") return String(config.MDNSHost); else
+	if (key == "IP") return String(WiFi.localIP()); else
+	if (key == "T_TEMP") return String(config.targetTemp); else
+	if (key == "ACTIV") return String(config.active);
 }
 
-// Save controller configuration to EEPROM
-void saveConfiguration()
-{
-	EEPROM.begin(sizeof(config));
-	EEPROM.put(0, config);
-	EEPROM.commit();
-	EEPROM.end();
-}
-
-// Get configuration data interactively and save to EEPROM.
-void getUserConfiguration()
-{
-	// Ask user for config values
-	Serial.print("SSID: ");
-	readString(config.ssid, SSID_LEN);
-	Serial.print("Secret: ");
-	readString(config.secret, SECRET_LEN);
-
-	// Defaults
-	config.targetTemp = DEFAULT_TARGET_TEMP;
-	config.active = DEFAULT_ACTIVE;
-
-	// Initisalised flag
-	config.initialised = EEPROM_INIT_CODE;
-
-	// And put it back to EEPROM for the next time
-	saveConfiguration();
-
-	Serial.println("Restarting...");
-	ESP.restart();
-}
-
-// Getting configuration either from EEPROM or from console.
-void loadConfiguration()
-{
-	// Read what's in EEPROM
-	EEPROM.begin(sizeof(config));
-	EEPROM.get(0, config);
-	EEPROM.end();
-
-	// // Debug:
-	// Serial.printf("SSID configured: %s\n", config.ssid);
-	// Serial.printf("Secret conigured: %s\n", config.secret);
-
-	// Check if it has a proper signature
-	Serial.println("Press any key to start configuration...");
-	if (EEPROM_INIT_CODE != config.initialised || Serial.readString() != "")
-	{
-		getUserConfiguration();
-	}
-	Serial.printf("SSID to connect: %s\n", config.ssid);
-}
-
-// Either WiFi is connected or restart.
-void makeSureWiFiConnected()
+// Handles HTTP GET /config.html request
+void HandleConfig()
 {
 	// Warning: uses global data
 	ControllerData *gd = &GD;
 
-	if (WL_CONNECTED != WiFi.status())
-	{
-		Serial.println("Disconnected.");
-		WiFi.begin(config.ssid, config.secret);
-		Serial.print("Connecting to WiFi hotspot: ");
-
-		// Wait for connection
-		int connectionAttempts = 0;
-		while (WiFi.status() != WL_CONNECTED)
-		{
-			delay(500);
-			Serial.print(".");
-			if (++connectionAttempts > 40)
-			{
-				Serial.println("Unable to connect.");
-				ESP.restart();
-			}
-		}
-		Serial.println();
-		Serial.printf("Connected to: %s\n", config.ssid);
-		Serial.printf("IP address: %s\n", WiFi.localIP().toString().c_str());
-
-		if (gd->mdns->begin(MDNS_HOST, WiFi.localIP()))
-		{
-			Serial.println("MDNS responder started.");
-		}
-	}
+	ESPTemplateProcessor(*gd->thermostatServer).send(
+		String("/config.html"),
+		mapConfigParameters);
 }
 
 // Go check if there is a new firmware version got available.
 void checkSoftwareUpdates()
 {
 	// pass current FW version and base URL to lookup
-	const int firmwareVersion = FW_VERSION;
-	updateFirmware(firmwareVersion, fwUrlBase);
+	updateFirmware(FW_VERSION, FW_URL_BASE);
 }
 
 void setup()
@@ -289,7 +191,7 @@ void setup()
 	Serial.printf("Bath floor controller build %d.\n", FW_VERSION);
 
 	Serial.println("Configuration loading.");
-	loadConfiguration();
+	loadConfiguration(&config);
 
 	// Warning: uses global data
 	ControllerData *gd = &GD;
@@ -299,11 +201,12 @@ void setup()
 	gd->timer = new Timer();
 	gd->mdns = new MDNSResponder();
 
-	makeSureWiFiConnected();
+	makeSureWiFiConnected(&config, gd->mdns);
 
 	gd->thermostatServer->on("/Status", HTTPMethod::HTTP_GET, HandleHTTPGetStatus);
 	gd->thermostatServer->on("/TargetTemperature", HTTPMethod::HTTP_PUT, HandleHTTPTargetTemperature);
 	gd->thermostatServer->on("/Active", HTTPMethod::HTTP_PUT, HandleHTTPActive);
+	gd->thermostatServer->on("/config", HTTPMethod::HTTP_GET, HandleConfig);
 
 	gd->thermostatServer->begin();
 	Serial.println("HTTP server started.");
@@ -320,7 +223,7 @@ void loop()
 {
 	ControllerData *gd = &GD;
 
-	makeSureWiFiConnected();
+	makeSureWiFiConnected(&config, gd->mdns);
 	gd->thermostatServer->handleClient();
 	gd->timer->update();
 }

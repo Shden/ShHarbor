@@ -1,4 +1,4 @@
-#include "temperatureSensor.h"
+#include "DS1820.h"
 #include "OneWire.h"
 
 TemperatureSensor::TemperatureSensor(int pin)
