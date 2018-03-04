@@ -162,9 +162,9 @@ String mapConfigParameters(const String& key)
 	if (key == "SSID") return String(config.ssid); else
 	if (key == "PASS") return String(config.secret); else
 	if (key == "MDNS") return String(config.MDNSHost); else
-	if (key == "IP") return String(WiFi.localIP()); else
+	if (key == "IP") return WiFi.localIP().toString(); else
 	if (key == "T_TEMP") return String(config.targetTemp); else
-	if (key == "ACTIV") return String(config.active);
+	if (key == "CHECKED") return config.active ? "checked" : "";
 }
 
 // Debug request arguments printout.
