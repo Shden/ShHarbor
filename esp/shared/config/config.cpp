@@ -44,19 +44,41 @@ void getWiFiConfigurationTTY(ConnectedESPConfiguration* configuration)
 	configuration->initialised = EEPROM_INIT_CODE;
 
 	// And put it back to EEPROM for the next time
-	saveConfiguration(configuration);
+	saveConfiguration(configuration, sizeof(configuration));
 
 	Serial.println("Restarting...");
 	ESP.restart();
 }
 
+void storeStruct(void *data_source, size_t size)
+{
+	EEPROM.begin(size * 2);
+	for(size_t i = 0; i < size; i++)
+	{
+		char data = ((char *)data_source)[i];
+		EEPROM.write(i, data);
+	}
+	EEPROM.commit();
+}
+
+void loadStruct(void *data_dest, size_t size)
+{
+	EEPROM.begin(size * 2);
+	for(size_t i = 0; i < size; i++)
+	{
+		char data = EEPROM.read(i);
+		((char *)data_dest)[i] = data;
+	}
+}
+
 // Getting configuration either from EEPROM or from console.
-void loadConfiguration(ConnectedESPConfiguration* configuration)
+void loadConfiguration(ConnectedESPConfiguration* configuration, size_t configSize)
 {
 	// Read what's in EEPROM
-	EEPROM.begin(sizeof(*configuration));
-	EEPROM.get(0, *configuration);
-	EEPROM.end();
+	loadStruct(configuration, configSize);
+	// EEPROM.begin(configSize);
+	// EEPROM.get(0, *configuration);
+	// EEPROM.end();
 
 	// // Debug:
 	// Serial.printf("SSID configured: %s\n", config.ssid);
@@ -72,10 +94,11 @@ void loadConfiguration(ConnectedESPConfiguration* configuration)
 }
 
 // Save controller configuration to EEPROM
-void saveConfiguration(ConnectedESPConfiguration* configuration)
+void saveConfiguration(ConnectedESPConfiguration* configuration, size_t configSize)
 {
-	EEPROM.begin(sizeof(*configuration));
-	EEPROM.put(0, *configuration);
-	EEPROM.commit();
-	EEPROM.end();
+	// EEPROM.begin(configSize);
+	// EEPROM.put(0, *configuration);
+	// EEPROM.commit();
+	// EEPROM.end();
+	storeStruct(configuration, configSize);
 }

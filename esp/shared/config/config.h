@@ -17,7 +17,7 @@ struct ConnectedESPConfiguration
 	char		MDNSHost[MDNS_HOST_LEN + 1];
 };
 
-void loadConfiguration(ConnectedESPConfiguration*);
-void saveConfiguration(ConnectedESPConfiguration*);
+void loadConfiguration(ConnectedESPConfiguration*, size_t);
+void saveConfiguration(ConnectedESPConfiguration*, size_t);
 
 #endif

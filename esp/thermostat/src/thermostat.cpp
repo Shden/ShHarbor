@@ -35,7 +35,7 @@
 #define DEFAULT_ACTIVE		0
 #define MDNS_HOST               "HB-THERMOSTAT"
 
-const char* FW_URL_BASE = "http://Den-MBP.local/firmware/ShHarbor/thermostat/";
+const char* FW_URL_BASE = "http://192.168.1.200/firmware/ShHarbor/thermostat/";
 
 void checkSoftwareUpdates();
 
@@ -108,7 +108,7 @@ void HandleHTTPGetStatus()
 	"\"Build\" : " + String(FW_VERSION) +
 	" }\r\n";
 
-	gd->thermostatServer->sendHeader("Access-Control-Allow-Origin", "*");
+	//gd->thermostatServer->sendHeader("Access-Control-Allow-Origin", "*");
 	gd->thermostatServer->send(200, "application/json", json);
 }
 
@@ -123,7 +123,7 @@ void HandleHTTPTargetTemperature()
 	if (temperature > 0.0 && temperature < 100.0)
 	{
 		config.targetTemp = temperature;
-		saveConfiguration(&config);
+		saveConfiguration(&config, sizeof(config));
 		gd->thermostatServer->send(200, "application/json",
 			"Updated to: " + param + "\r\n");
 	}
@@ -145,7 +145,7 @@ void HandleHTTPActive()
 	if (active == 0 || active == 1)
 	{
 		config.active = active;
-		saveConfiguration(&config);
+		saveConfiguration(&config, sizeof(config));
 		gd->thermostatServer->send(200, "application/json",
 			"Updated to: " + activeParam + "\r\n");
 	}
@@ -163,6 +163,7 @@ String mapConfigParameters(const String& key)
 	if (key == "PASS") return String(config.secret); else
 	if (key == "MDNS") return String(config.MDNSHost); else
 	if (key == "IP") return WiFi.localIP().toString(); else
+	if (key == "BUILD") return String(FW_VERSION); else
 	if (key == "T_TEMP") return String(config.targetTemp); else
 	if (key == "CHECKED") return config.active ? "checked" : "";
 }
@@ -197,7 +198,7 @@ void UpdateConfig()
 		gd->thermostatServer->arg("PASS").toCharArray(config.secret, SECRET_LEN);
 		gd->thermostatServer->arg("MDNS").toCharArray(config.MDNSHost, MDNS_HOST_LEN);
 
-		saveConfiguration(&config);
+		saveConfiguration(&config, sizeof(config));
 
 		// redirect to the same page without arguments
 		gd->thermostatServer->sendHeader("Location", String("/config"), true);
@@ -216,59 +217,13 @@ void UpdateConfig()
 
 		config.active = gd->thermostatServer->hasArg("ACTIVE");
 
-		saveConfiguration(&config);
+		saveConfiguration(&config, sizeof(config));
 	}
 
 	ESPTemplateProcessor(*gd->thermostatServer).send(
 		String("/config.html"),
 		mapConfigParameters);
 }
-
-// // Handle network parameters update, requires reboot after update.
-// void UpdateNetworkSetup()
-// {
-// 	dbgPostPrintout();
-//
-// 	// Warning: uses global data
-// 	ControllerData *gd = &GD;
-//
-// 	gd->thermostatServer->arg("SSID").toCharArray(config.ssid, SSID_LEN);
-// 	gd->thermostatServer->arg("PASS").toCharArray(config.secret, SECRET_LEN);
-// 	gd->thermostatServer->arg("MDNS").toCharArray(config.MDNSHost, MDNS_HOST_LEN);
-//
-// 	saveConfiguration(&config);
-//
-// 	const char* msg = "Configuration updated, restarting...";
-// 	Serial.println(msg);
-// 	gd->thermostatServer->send(200, "text/html", msg);
-//
-// 	ESP.restart();
-// }
-//
-// void UpdateHeatingSetup()
-// {
-// 	dbgPostPrintout();
-//
-// 	// Warning: uses global data
-// 	ControllerData *gd = &GD;
-//
-// 	String param = gd->thermostatServer->arg("T_TEMP");
-// 	float temperature = param.toFloat();
-// 	if (temperature > 0.0 && temperature < 100.0)
-// 	{
-// 		config.targetTemp = temperature;
-// 		saveConfiguration(&config);
-// 		// gd->thermostatServer->send(200, "application/json",
-// 		// 	"Updated to: " + param + "\r\n");
-// 	}
-// 	// else
-// 	// {
-// 	// 	gd->thermostatServer->send(401, "text/html",
-// 	// 		"Wrong value: " + param + "\r\n");
-// 	// }
-//
-// 	GetConfigForm();
-// }
 
 // Go check if there is a new firmware or SPIFFS got available.
 void checkSoftwareUpdates()
@@ -291,7 +246,7 @@ void setup()
 	Serial.printf("Thermostat build %d.\n", FW_VERSION);
 
 	Serial.println("Configuration loading.");
-	loadConfiguration(&config);
+	loadConfiguration(&config, sizeof(config));
 
 	// Warning: uses global data
 	ControllerData *gd = &GD;
