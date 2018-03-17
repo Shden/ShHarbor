@@ -59,6 +59,7 @@ void storeStruct(void *data_source, size_t size)
 		EEPROM.write(i, data);
 	}
 	EEPROM.commit();
+	EEPROM.end();
 }
 
 void loadStruct(void *data_dest, size_t size)
@@ -69,6 +70,7 @@ void loadStruct(void *data_dest, size_t size)
 		char data = EEPROM.read(i);
 		((char *)data_dest)[i] = data;
 	}
+	EEPROM.end();
 }
 
 // Getting configuration either from EEPROM or from console.

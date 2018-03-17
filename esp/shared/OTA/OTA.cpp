@@ -75,6 +75,7 @@ void updateFirmware(int currentVersion, const char* repositoryBaseUrl)
 		Serial.println(newFirmwareURL);
 
 		handeUpdateResult(ESPhttpUpdate.update(newFirmwareURL));
+		ESP.restart();
 	}
 }
 
@@ -90,6 +91,7 @@ void updateSpiffs(int currentVersion, const char* repositoryBaseUrl)
 		Serial.println(newSpiffsURL);
 
 		handeUpdateResult(ESPhttpUpdate.updateSpiffs(newSpiffsURL));
+		ESP.restart();
 	}
 }
 
