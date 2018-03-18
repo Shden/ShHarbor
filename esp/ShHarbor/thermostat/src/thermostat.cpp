@@ -123,7 +123,7 @@ void HandleHTTPTargetTemperature()
 	if (temperature > 0.0 && temperature < 100.0)
 	{
 		config.targetTemp = temperature;
-		saveConfiguration(&config, sizeof(config));
+		saveConfiguration(&config, sizeof(ConfigurationData));
 		gd->thermostatServer->send(200, "application/json",
 			"Updated to: " + param + "\r\n");
 	}
@@ -246,7 +246,7 @@ void setup()
 	Serial.printf("Thermostat build %d.\n", FW_VERSION);
 
 	Serial.println("Configuration loading.");
-	loadConfiguration(&config, sizeof(config));
+	loadConfiguration(&config, sizeof(ConfigurationData));
 
 	// Warning: uses global data
 	ControllerData *gd = &GD;

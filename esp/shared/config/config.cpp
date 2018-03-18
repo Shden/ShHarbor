@@ -38,13 +38,13 @@ void getWiFiConfigurationTTY(ConnectedESPConfiguration* configuration)
 	readString(configuration->secret, SECRET_LEN);
 
 	// Defaults
-	strncpy(configuration->MDNSHost, "ESP" + ESP.getChipId(), MDNS_HOST_LEN);
+	//strncpy(configuration->MDNSHost, "ESP" + ESP.getChipId(), MDNS_HOST_LEN);
 
 	// Initisalised flag
 	configuration->initialised = EEPROM_INIT_CODE;
 
 	// And put it back to EEPROM for the next time
-	saveConfiguration(configuration, sizeof(configuration));
+	saveConfiguration(configuration, sizeof(ConnectedESPConfiguration));
 
 	Serial.println("Restarting...");
 	ESP.restart();
@@ -52,25 +52,25 @@ void getWiFiConfigurationTTY(ConnectedESPConfiguration* configuration)
 
 void storeStruct(void *data_source, size_t size)
 {
-	EEPROM.begin(size * 2);
+	EEPROM.begin(size);
 	for(size_t i = 0; i < size; i++)
 	{
-		char data = ((char *)data_source)[i];
-		EEPROM.write(i, data);
+		char b = ((char *)data_source)[i];
+		// Serial.print(b);
+		EEPROM.write(i, b);
 	}
 	EEPROM.commit();
-	EEPROM.end();
 }
 
 void loadStruct(void *data_dest, size_t size)
 {
-	EEPROM.begin(size * 2);
+	EEPROM.begin(size);
 	for(size_t i = 0; i < size; i++)
 	{
-		char data = EEPROM.read(i);
-		((char *)data_dest)[i] = data;
+		char b = EEPROM.read(i);
+		// Serial.print(b);
+		((char *)data_dest)[i] = b;
 	}
-	EEPROM.end();
 }
 
 // Getting configuration either from EEPROM or from console.
@@ -83,8 +83,8 @@ void loadConfiguration(ConnectedESPConfiguration* configuration, size_t configSi
 	// EEPROM.end();
 
 	// // Debug:
-	// Serial.printf("SSID configured: %s\n", config.ssid);
-	// Serial.printf("Secret conigured: %s\n", config.secret);
+	// Serial.printf("SSID configured: %s\n", configuration->ssid);
+	// Serial.printf("Secret conigured: %s\n", configuration->secret);
 
 	// Check if it has a proper signature
 	Serial.println("Press any key to start configuration...");

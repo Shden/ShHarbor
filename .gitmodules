@@ -1,3 +1,6 @@
 [submodule "esp/thermostat/lib/ESPTemplateProcessor"]
 	path = esp/ShHarbor/thermostat/lib/ESPTemplateProcessor
 	url = https://github.com/winder/ESPTemplateProcessor.git
+[submodule "esp/ShWade/thermosensor/lib/ESPTemplateProcessor"]
+	path = esp/ShWade/thermosensor/lib/ESPTemplateProcessor
+	url = https://github.com/winder/ESPTemplateProcessor.git

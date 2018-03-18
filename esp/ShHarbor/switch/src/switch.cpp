@@ -160,7 +160,7 @@ void HandleHTTPSetLinkedSwitch()
 
 		config.linkedSwitchLine[lineNum] = linkedLineNum;
 
-		saveConfiguration(&config);
+		saveConfiguration(&config, sizeof(ConfigurationData));
 		gd->switchServer->send(200, "application/json",
 			"Updated to: " + linkedAddress +
 			" and line: " + linkedLine + "\r\n");
@@ -304,7 +304,7 @@ void setup()
 	Serial.printf("Switch controller build %d.\n", FW_VERSION);
 
 	Serial.println("Configuration loading.");
-	loadConfiguration(&config);
+	loadConfiguration(&config, sizeof(ConfigurationData));
 
 	// Warning: uses global data
 	ControllerData *gd = &GD;

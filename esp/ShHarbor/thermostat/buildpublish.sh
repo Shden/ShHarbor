@@ -1,9 +1,9 @@
 #!/bin/bash
-BUILD_DIR=~/ShHarbor/esp/thermostat/.pioenvs/esp12
+BUILD_DIR=~/ShHarbor/esp/ShHarbor/thermostat/.pioenvs/esp12
 PUBLISH_DIR=~/Shden/shweb/firmware/ShHarbor/thermostat
 
-cp ../../controlPanel/build/controlPanelApp.js.gz data/build/
-cp ../../controlPanel/index.html data/
+cp ../controlPanel/build/controlPanelApp.js.gz data/build/
+cp ../controlPanel/index.html data/
 
 ~/.platformio/penv/bin/pio run
 ~/.platformio/penv/bin/pio run -t buildfs
