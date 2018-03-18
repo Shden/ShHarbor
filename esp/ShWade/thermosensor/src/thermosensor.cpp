@@ -44,7 +44,6 @@ struct ControllerData
 	ESP8266WebServer*       thermosensorServer;
 	MDNSResponder*          mdns;
 	Timer*                  timer;
-	uint8_t                 heatingOn;
 } GD;
 
 // will have ssid, secret, initialised, MDNSHost. None in addition
@@ -83,11 +82,8 @@ void HandleHTTPGetStatus()
 
 	String json =
 	String("{ ") +
-	"\"CurrentTemperature\" : " + String(getTemperature(), 2) +
-	", " +
-	"\"Heating\" : " + String(gd->heatingOn) +
-	", " +
-	"\"Build\" : " + String(FW_VERSION) +
+		"\"CurrentTemperature\" : " + String(getTemperature(), 2) + ", " +
+		"\"Build\" : " + String(FW_VERSION) +
 	" }\r\n";
 
 	//gd->thermosensorServer->sendHeader("Access-Control-Allow-Origin", "*");
@@ -195,6 +191,8 @@ void setup()
 	// Set up regulars
 	gd->timer->every(UPDATE_TEMP_EVERY, temperatureUpdate);
 	gd->timer->every(CHECK_SW_UPDATES_EVERY, checkSoftwareUpdates);
+
+	pinMode(ONE_WIRE_PIN, INPUT_PULLUP);
 }
 
 void loop()

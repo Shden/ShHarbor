@@ -27,7 +27,7 @@ void TemperatureSensor::updateTemperature()
 		ow->write(0xBE);         // Read Scratchpad
 
 		byte data[12];
-	        for (int i = 0; i < 9; i++) // we need 9 bytes
+		for (int i = 0; i < 9; i++) // we need 9 bytes
 		{
 			data[i] = ow->read();
 //			Serial.print(data[i], HEX);
