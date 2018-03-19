@@ -70,8 +70,6 @@ void temperatureUpdate()
 	// Warning: uses global data.
 	ControllerData *gd = &GD;
 
-	gd->temperatureSensor->updateTemperature();
-
 	float temp = getTemperature();
 
 	// Here goes workaround for %f which wasnt working right.
