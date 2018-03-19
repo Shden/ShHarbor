@@ -27,11 +27,8 @@
 
 #define ONE_WIRE_PIN            5
 #define WEB_SERVER_PORT         80
-#define UPDATE_TEMP_EVERY       (5000L)         // every 5 sec
-#define CHECK_HEATING_EVERY     (60000L)        // every 1 min
+#define UPDATE_TEMP_EVERY       (10000L)        // every 10 sec
 #define CHECK_SW_UPDATES_EVERY	(60000L*5)	// every 5 min
-#define DEFAULT_TARGET_TEMP	28.0
-#define DEFAULT_ACTIVE		0
 #define MDNS_HOST               "HB-THERMOSENSOR"
 
 const char* FW_URL_BASE = "http://192.168.1.162/firmware/ShWade/thermosensor/";
@@ -66,8 +63,6 @@ void temperatureUpdate()
 	// Warning: uses global data.
 	ControllerData *gd = &GD;
 
-	gd->temperatureSensor->updateTemperature();
-
 	float temp = getTemperature();
 
 	// Here goes workaround for %f which wasnt working right.
@@ -100,25 +95,25 @@ String mapConfigParameters(const String& key)
 	if (key == "BUILD") return String(FW_VERSION);
 }
 
-// Debug request arguments printout.
-void dbgPostPrintout()
-{
-	// Warning: uses global data
-	ControllerData *gd = &GD;
+// // Debug request arguments printout.
+// void dbgPostPrintout()
+// {
+// 	// Warning: uses global data
+// 	ControllerData *gd = &GD;
+//
+// 	for (int i=0; i < gd->thermosensorServer->args(); i++)
+// 	{
+// 		Serial.print(gd->thermosensorServer->argName(i));
+// 		Serial.print(": ");
+// 		Serial.print(gd->thermosensorServer->arg(i));
+// 		Serial.println();
+// 	}
+// }
 
-	for (int i=0; i < gd->thermosensorServer->args(); i++)
-	{
-		Serial.print(gd->thermosensorServer->argName(i));
-		Serial.print(": ");
-		Serial.print(gd->thermosensorServer->arg(i));
-		Serial.println();
-	}
-}
-
-// Handles HTTP GET /config.html request
-void UpdateConfig()
+// Handles HTTP GET & POST /config.html requests
+void HandleConfig()
 {
-	dbgPostPrintout();
+	// dbgPostPrintout();
 
 	// Warning: uses global data
 	ControllerData *gd = &GD;
@@ -183,7 +178,7 @@ void setup()
 		Serial.println("SPIFFS mount failed.");
 
 	gd->thermosensorServer->on("/Status", HTTPMethod::HTTP_GET, HandleHTTPGetStatus);
-	gd->thermosensorServer->on("/config", UpdateConfig);
+	gd->thermosensorServer->on("/config", HandleConfig);
 
 	gd->thermosensorServer->begin();
 	Serial.println("HTTP server started.");
