@@ -6,7 +6,8 @@
 	- DS1820 temperature control sensor.
 	- REST API to get sensor data points.
 	- OTA firmware update.
-	- Built in configuration web UI at /config
+	- Post temperature update to configured upstream API endpoint.
+	- Built in configuration web UI at /config.
 
 	Toolchain: PlatformIO.
 
@@ -24,12 +25,14 @@
 #include <config.h>
 #include <wifi.h>
 #include <ESPTemplateProcessor.h>
+#include <ESP8266HTTPClient.h>
 
 #define ONE_WIRE_PIN            5
 #define WEB_SERVER_PORT         80
-#define UPDATE_TEMP_EVERY       (10000L)        // every 10 sec
+#define POST_TEMP_EVERY       	(10000L)        // every 10 sec
 #define CHECK_SW_UPDATES_EVERY	(60000L*5)	// every 5 min
 #define MDNS_HOST               "HB-THERMOSENSOR"
+#define ENDPOINT_URL_LENGTH	80
 
 const char* FW_URL_BASE = "http://192.168.1.162/firmware/ShWade/thermosensor/";
 
@@ -38,14 +41,16 @@ void checkSoftwareUpdates();
 struct ControllerData
 {
 	TemperatureSensor*      temperatureSensor;
+	char			sensorAddress[20];
 	ESP8266WebServer*       thermosensorServer;
 	MDNSResponder*          mdns;
 	Timer*                  timer;
 } GD;
 
-// will have ssid, secret, initialised, MDNSHost. None in addition
+// will have ssid, secret, initialised, MDNSHost + API endpoit to post data.
 struct ConfigurationData : ConnectedESPConfiguration
 {
+	char			postDataAPIEndpoint[ENDPOINT_URL_LENGTH];
 } config;
 
 // Go to sensor and get current temperature.
@@ -54,11 +59,11 @@ float getTemperature()
 	// Warning: uses global data.
 	ControllerData *gd = &GD;
 
-	return gd->temperatureSensor->getTemperature();
+	return gd->temperatureSensor->getTemperature(0);
 }
 
-// Update temperatureSensor internal data
-void temperatureUpdate()
+// Post temperature update to the linked upstream server
+void postTemperatureUpdate()
 {
 	// Warning: uses global data.
 	ControllerData *gd = &GD;
@@ -67,6 +72,25 @@ void temperatureUpdate()
 
 	// Here goes workaround for %f which wasnt working right.
 	Serial.printf("Temperature: %d.%02d\n", (int)temp, (int)(temp*100)%100);
+
+	if (strlen(config.postDataAPIEndpoint))
+	{
+		// linked swich update HTTP reqiest
+		String postDataURL =
+			String("http://") +
+			String(config.postDataAPIEndpoint) +
+			String("?temperature=") + String(temp, 2) +
+			String("&sensor=") + String(gd->sensorAddress);
+
+		Serial.print("Invocation URL: ");
+		Serial.println(postDataURL);
+
+		HTTPClient httpClient;
+		httpClient.begin(postDataURL);
+		int httpCode = httpClient.GET();
+		Serial.printf("Responce code: %d\n", httpCode);
+		httpClient.end();
+	}
 }
 
 // HTTP GET /Status
@@ -92,7 +116,8 @@ String mapConfigParameters(const String& key)
 	if (key == "PASS") return String(config.secret); else
 	if (key == "MDNS") return String(config.MDNSHost); else
 	if (key == "IP") return WiFi.localIP().toString(); else
-	if (key == "BUILD") return String(FW_VERSION);
+	if (key == "BUILD") return String(FW_VERSION); else
+	if (key == "API") return String(config.postDataAPIEndpoint);
 }
 
 // // Debug request arguments printout.
@@ -134,6 +159,15 @@ void HandleConfig()
 		WiFi.disconnect();
 	}
 
+	// GENERAL_UPDATE
+	if (gd->thermosensorServer->hasArg("GENERAL_UPDATE"))
+	{
+		gd->thermosensorServer->arg("API").toCharArray(
+			config.postDataAPIEndpoint, ENDPOINT_URL_LENGTH
+		);
+		saveConfiguration(&config, sizeof(ConfigurationData));
+	}
+
 	ESPTemplateProcessor(*gd->thermosensorServer).send(
 		String("/config.html"),
 		mapConfigParameters);
@@ -165,8 +199,12 @@ void setup()
 	// Warning: uses global data
 	ControllerData *gd = &GD;
 
-	gd->thermosensorServer = new ESP8266WebServer(WEB_SERVER_PORT);
+	pinMode(ONE_WIRE_PIN, INPUT_PULLUP);
 	gd->temperatureSensor = new TemperatureSensor(ONE_WIRE_PIN);
+	gd->temperatureSensor->getAddress(0, gd->sensorAddress);
+	Serial.printf("Sensor address: %s\n", gd->sensorAddress);
+
+	gd->thermosensorServer = new ESP8266WebServer(WEB_SERVER_PORT);
 	gd->timer = new Timer();
 	gd->mdns = new MDNSResponder();
 
@@ -184,10 +222,8 @@ void setup()
 	Serial.println("HTTP server started.");
 
 	// Set up regulars
-	gd->timer->every(UPDATE_TEMP_EVERY, temperatureUpdate);
+	gd->timer->every(POST_TEMP_EVERY, postTemperatureUpdate);
 	gd->timer->every(CHECK_SW_UPDATES_EVERY, checkSoftwareUpdates);
-
-	pinMode(ONE_WIRE_PIN, INPUT_PULLUP);
 }
 
 void loop()

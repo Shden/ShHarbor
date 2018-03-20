@@ -8,10 +8,13 @@ class TemperatureSensor
 {
 public:
 	// Constructor
-	TemperatureSensor(int pin);
+	TemperatureSensor(uint8_t pin);
 
-	// To get the latest update from the sensor
-	float getTemperature();
+	// To get the latest temperature update from the sensor by index
+	float getTemperature(uint8_t sensorIndex);
+
+	// Get 1wire address by index
+	void getAddress(uint8_t sensorIndex, char* address);
 private:
 	OneWire *ow;
 	DallasTemperature *sensors;

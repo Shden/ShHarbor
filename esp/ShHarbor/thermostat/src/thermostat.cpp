@@ -29,7 +29,7 @@
 #define AC_CONTROL_PIN          13
 #define WEB_SERVER_PORT         80
 #define UPDATE_TEMP_EVERY       (5000L)         // every 5 sec
-#define CHECK_HEATING_EVERY     (60000L)        // every 1 min
+#define CHECK_HEATING_EVERY     (15000L)        // every 15 sec
 #define CHECK_SW_UPDATES_EVERY	(60000L*5)	// every 5 min
 #define DEFAULT_TARGET_TEMP	28.0
 #define DEFAULT_ACTIVE		0
@@ -61,7 +61,7 @@ float getTemperature()
 	// Warning: uses global data.
 	ControllerData *gd = &GD;
 
-	return gd->temperatureSensor->getTemperature();
+	return gd->temperatureSensor->getTemperature(0);
 }
 
 // Update temperatureSensor internal data
