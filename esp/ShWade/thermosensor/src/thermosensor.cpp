@@ -199,8 +199,9 @@ void setup()
 	// Warning: uses global data
 	ControllerData *gd = &GD;
 
-	pinMode(ONE_WIRE_PIN, INPUT_PULLUP);
 	gd->temperatureSensor = new TemperatureSensor(ONE_WIRE_PIN);
+	pinMode(ONE_WIRE_PIN, INPUT_PULLUP);
+	delay(500);
 	gd->temperatureSensor->getAddress(0, gd->sensorAddress);
 	Serial.printf("Sensor address: %s\n", gd->sensorAddress);
 
@@ -215,7 +216,7 @@ void setup()
 	else
 		Serial.println("SPIFFS mount failed.");
 
-	gd->thermosensorServer->on("/Status", HTTPMethod::HTTP_GET, HandleHTTPGetStatus);
+	gd->thermosensorServer->on("/status", HTTPMethod::HTTP_GET, HandleHTTPGetStatus);
 	gd->thermosensorServer->on("/config", HandleConfig);
 
 	gd->thermosensorServer->begin();

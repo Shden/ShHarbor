@@ -33,7 +33,7 @@ void TemperatureSensor::getAddress(uint8_t sensorIndex, char* address)
 
 	if (sensors->getAddress(sensorAddress, sensorIndex))
 	{
-		static char *hex = "0123456789ABCDEF";
+		const char *hex = "0123456789ABCDEF";
 		uint8_t i, j;
 
 		for (i=0, j=0; i<8; i++)
