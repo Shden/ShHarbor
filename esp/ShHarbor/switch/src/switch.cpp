@@ -52,7 +52,7 @@
 #define O2			U4
 #define O3			U5
 
-const char* FW_URL_BASE = "http://Den-MBP.local/firmware/ShHarbor/switch/";
+const char* FW_URL_BASE = "http://192.168.1.200/firmware/ShHarbor/switch/";
 
 void checkSoftwareUpdates();
 

@@ -15,12 +15,12 @@ class RoomClimate extends Component { 			// eslint-disable-line no-unused-vars
 		return (
 			<Grid>
 				<Row>
-					<Col xs={2}>
+					<Col xs={3}>
 						<b>{this.props.name}:</b>
 					</Col>
-					<Col xs={6}>
+					<Col xs={8}>
 						Температура {this.state.CurrentTemperature}&deg;C,
-						настройка терморегулятора {this.state.TargetTemperature}&deg;C,
+						настройка терморегулятора <a href={'http://' + this.props.address + '/config'}>{this.state.TargetTemperature}&deg;C</a>,
 						нагрев {this.state.Heating ? 'включен' : 'выключен' }.
 					</Col>
 				</Row>
