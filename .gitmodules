@@ -4,3 +4,9 @@
 [submodule "esp/ShWade/thermosensor/lib/ESPTemplateProcessor"]
 	path = esp/ShWade/thermosensor/lib/ESPTemplateProcessor
 	url = https://github.com/winder/ESPTemplateProcessor.git
+[submodule "esp/ShWade/switch-2ch/lib/ESPTemplateProcessor"]
+	path = esp/ShWade/switch-2ch/lib/ESPTemplateProcessor
+	url = https://github.com/winder/ESPTemplateProcessor.git
+[submodule "esp/ShWade/switch-2ch/lib/--force"]
+	path = esp/ShWade/switch-2ch/lib/--force
+	url = https://github.com/winder/ESPTemplateProcessor.git

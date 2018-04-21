@@ -1,0 +1,49 @@
+<html>
+<head>
+	<title>Thermostat configuration</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+</head>
+<body>
+	<div class="row justify-content-md-center">
+		<div class="col-sm-4">
+			<br>
+			<h1>Network setup</h1>
+			<hr>
+			<form method="POST">
+				<div class="form-row">
+					<div class="form-group col-md-6">
+						<label for="ssid">SSID</label>
+						<input type="ssid" class="form-control" name="SSID" value="%SSID%" placeholder="SSID">
+					</div>
+					<div class="form-group col-md-6">
+						<label for="inputPassword">Password</label>
+						<input type="password" class="form-control" name="PASS" value="%PASS%" placeholder="Password">
+					</div>
+				</div>
+				<div class="form-group">
+					<label for="mDNS">mDNS Name</label>
+					<input type="text" class="form-control" name="MDNS" value="%MDNS%" placeholder="mDNS Name">
+				</div>
+				<div class="form-group">
+					<label for="IP">IP address</label>
+					<input type="text" class="form-control" name="IP" value="%IP%" readonly>
+				</div>
+				<div class="form-group">
+					<label for="BUILD">Build</label>
+					<input type="text" class="form-control" name="BUILD" value="%BUILD%" readonly>
+				</div>
+				<button type="submit" name="NETWORK_UPDATE" class="btn btn-danger">Update network configuration and reconnect</button>
+			</form>
+			<br>
+			<h1>General settings</h1>
+			<hr>
+			<form method="POST">
+				<br>
+				<button type="submit" name="GENERAL_UPDATE" class="btn btn-primary">Update general settings</button>
+			</form>
+		</div>
+	</div>
+</body>
+</html>

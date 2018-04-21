@@ -31,7 +31,6 @@
 #define WEB_SERVER_PORT         80
 #define POST_TEMP_EVERY       	(10000L)        // every 10 sec
 #define CHECK_SW_UPDATES_EVERY	(60000L*5)	// every 5 min
-#define MDNS_HOST               "HB-THERMOSENSOR"
 #define ENDPOINT_URL_LENGTH	80
 
 const char* FW_URL_BASE = "http://192.168.1.162/firmware/ShWade/thermosensor/";
@@ -105,7 +104,6 @@ void HandleHTTPGetStatus()
 		"\"Build\" : " + String(FW_VERSION) +
 	" }\r\n";
 
-	//gd->thermosensorServer->sendHeader("Access-Control-Allow-Origin", "*");
 	gd->thermosensorServer->send(200, "application/json", json);
 }
 
