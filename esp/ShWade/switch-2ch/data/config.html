@@ -6,64 +6,66 @@
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
 </head>
 <body>
-	<ul class="nav nav-tabs">
-		<li class="nav-item">
-			<a class="nav-link active" href="/config">Configuration</a>
-		</li>
-		<li class="nav-item">
-			<a class="nav-link" href="/control">Switch control</a>
-		</li>
-	</ul>
-	<div class="row justify-content-md-center">
-		<div class="col-sm-5">
-			<br>
-			<h2>Network setup</h2>
-			<hr>
-			<form method="POST">
-				<div class="form-row">
-					<div class="form-group col-md-6">
-						<label for="ssid">SSID</label>
-						<input type="ssid" class="form-control" name="SSID" value="%SSID%" placeholder="SSID">
-					</div>
-					<div class="form-group col-md-6">
-						<label for="inputPassword">Password</label>
-						<input type="password" class="form-control" name="PASS" value="%PASS%" placeholder="Password">
-					</div>
-				</div>
-				<div class="form-group">
-					<label for="mDNS">mDNS Name</label>
-					<input type="text" class="form-control" name="MDNS" value="%MDNS%" placeholder="mDNS Name">
-				</div>
-				<button type="submit" name="NETWORK_UPDATE" class="btn btn-danger">Update network configuration and reconnect</button>
-			</form>
-			<br>
-			<h2>Device Information</h2>
-			<hr>
-			<div class="form-row">
-				<div class="form-group col-md-6">
-					<label for="IP">IP address</label>
-					<input type="text" class="form-control" name="IP" value="%IP%" readonly>
-				</div>
-				<div class="form-group col-md-6">
-					<label for="BUILD">Build</label>
-					<input type="text" class="form-control" name="BUILD" value="%BUILD%" readonly>
-				</div>
-			</div>
-			<br>
-			<h2>General settings</h2>
-			<hr>
-			<form method="POST">
-				<div class="form-group">
-					<label for="mDNS">OTA URL</label>
-					<div class="input-group mb-3">
-						<input type="text" class="form-control" name="OTA_URL" value="%OTA_URL%" placeholder="OTA URL">
-						<div class="input-group-append">
-							<button type="submit" name="CHECK_UPDATE_NOW" class="btn btn-outline-secondary" type="button">Check now</button>
+	<div class="container">
+		<ul class="nav nav-tabs">
+			<li class="nav-item">
+				<a class="nav-link active" href="/config">Configuration</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="/control">Switch control</a>
+			</li>
+		</ul>
+		<div class="row justify-content-md-center">
+			<div class="col-sm-5">
+				<br>
+				<h2>Network setup</h2>
+				<hr>
+				<form method="POST">
+					<div class="form-row">
+						<div class="form-group col-md-6">
+							<label for="ssid">SSID</label>
+							<input type="ssid" class="form-control" name="SSID" value="%SSID%" placeholder="SSID">
+						</div>
+						<div class="form-group col-md-6">
+							<label for="inputPassword">Password</label>
+							<input type="password" class="form-control" name="PASS" value="%PASS%" placeholder="Password">
 						</div>
 					</div>
+					<div class="form-group">
+						<label for="mDNS">mDNS Name</label>
+						<input type="text" class="form-control" name="MDNS" value="%MDNS%" placeholder="mDNS Name">
+					</div>
+					<button type="submit" name="NETWORK_UPDATE" class="btn btn-danger">Update network and reconnect</button>
+				</form>
+				<br>
+				<h2>Device Information</h2>
+				<hr>
+				<div class="form-row">
+					<div class="form-group col-md-6">
+						<label for="IP">IP address</label>
+						<input type="text" class="form-control" name="IP" value="%IP%" readonly>
+					</div>
+					<div class="form-group col-md-6">
+						<label for="BUILD">Build</label>
+						<input type="text" class="form-control" name="BUILD" value="%BUILD%" readonly>
+					</div>
 				</div>
-				<button type="submit" name="GENERAL_UPDATE" class="btn btn-primary">Update general settings</button>
-			</form>
+				<br>
+				<h2>General settings</h2>
+				<hr>
+				<form method="POST">
+					<div class="form-group">
+						<label for="mDNS">OTA URL</label>
+						<div class="input-group mb-3">
+							<input type="text" class="form-control" name="OTA_URL" value="%OTA_URL%" placeholder="OTA URL">
+							<div class="input-group-append">
+								<button type="submit" name="CHECK_UPDATE_NOW" class="btn btn-outline-secondary" type="button">Check now</button>
+							</div>
+						</div>
+					</div>
+					<button type="submit" name="GENERAL_UPDATE" class="btn btn-primary">Update general settings</button>
+				</form>
+			</div>
 		</div>
 	</div>
 </body>

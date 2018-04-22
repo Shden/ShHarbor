@@ -14,10 +14,10 @@
 
 	API:
 	curl 192.168.1.15/status
-	curl 192.168.1.15/PIOA
-	curl 192.168.1.15/PIOB
-	curl -X PUT 192.168.1.15/PIOA?state=0
-	curl -X PUT 192.168.1.15/PIOB?state=1
+	curl 192.168.1.15/LineA
+	curl 192.168.1.15/LineB
+	curl -X PUT 192.168.1.15/LineA?state=0
+	curl -X PUT 192.168.1.15/LineB?state=1
 */
 
 #include <Arduino.h>
@@ -34,11 +34,11 @@
 
 #define WEB_SERVER_PORT         80
 #define CHECK_SW_UPDATES_EVERY	(60000L*5)	// every 5 min
-#define PIO_A			0
-#define PIO_B			1
-#define PIO_A_PIN		12
-#define PIO_B_PIN		14
-#define PIO_ERROR		-1
+#define LINE_A			0
+#define LINE_B			1
+#define LINE_A_PIN		12
+#define LINE_B_PIN		14
+#define WRONG_LINE_NUMBER	-1
 #define OTA_URL_LEN		80
 
 //const char* FW_URL_BASE = "http://192.168.1.162/firmware/ShWade/switch-2ch/";
@@ -58,30 +58,30 @@ struct ConfigurationData : ConnectedESPConfiguration
 	char			OTA_URL[OTA_URL_LEN + 1];
 } config;
 
-// Returns channel state by number
-int getPIO(int channelNo)
+// Returns line state by number
+int getLine(int lineNo)
 {
-	if (PIO_A == channelNo)
+	if (LINE_A == lineNo)
 	{
-		return digitalRead(PIO_A_PIN);
+		return digitalRead(LINE_A_PIN);
 	}
-	else if (PIO_B == channelNo)
+	else if (LINE_B == lineNo)
 	{
-		return digitalRead(PIO_B_PIN);
+		return digitalRead(LINE_B_PIN);
 	}
-	else return PIO_ERROR;
+	else return WRONG_LINE_NUMBER;
 }
 
-// Updates channel state by number
-void setPIO(int channelNo, int newState)
+// Updates line state by number
+void setLine(int lineNo, int newState)
 {
-	if (PIO_A == channelNo)
+	if (LINE_A == lineNo)
 	{
-		digitalWrite(PIO_A_PIN, newState);
+		digitalWrite(LINE_A_PIN, newState);
 	}
-	else if (PIO_B == channelNo)
+	else if (LINE_B == lineNo)
 	{
-		digitalWrite(PIO_B_PIN, newState);
+		digitalWrite(LINE_B_PIN, newState);
 	}
 }
 
@@ -93,16 +93,16 @@ void HandleHTTPGetStatus()
 
 	String json =
 		String("{ ") +
-			"\"PIO_A\" : " + String(getPIO(PIO_A)) + ", " +
-			"\"PIO_B\" : " + String(getPIO(PIO_B)) + ", " +
+			"\"LineA\" : " + String(getLine(LINE_A)) + ", " +
+			"\"LineB\" : " + String(getLine(LINE_B)) + ", " +
 			"\"Build\" : " + String(FW_VERSION) +
 		" }\r\n";
 
 	gd->switchServer->send(200, "application/json", json);
 }
 
-// Handles GET & PUT by channelNo requests
-void HandlePIO(int channelNo)
+// Handles GET & PUT by lineNo requests
+void HandleLine(int lineNo)
 {
 	// Warning: uses global data
 	ControllerData *gd = &GD;
@@ -111,7 +111,7 @@ void HandlePIO(int channelNo)
 	{
 		case HTTPMethod::HTTP_GET:
 			{
-				String res = String(getPIO(channelNo));
+				String res = String(getLine(lineNo));
 				gd->switchServer->send(
 					200, "application/json", res);
 			}
@@ -121,36 +121,35 @@ void HandlePIO(int channelNo)
 		case HTTPMethod::HTTP_POST:
 			{
 				String param = gd->switchServer->arg("state");
-				int channelState = param.toInt();
-				if (channelState == 0 || channelState == 1)
+				int lineState = param.toInt();
+				if (lineState == 0 || lineState == 1)
 				{
-					setPIO(channelNo, channelState);
+					setLine(lineNo, lineState);
 					gd->switchServer->send(
 						200, "application/json",
 						"Updated to: " +
-						String(getPIO(channelNo)) + "\r\n");
+						String(getLine(lineNo)) + "\r\n");
 				}
 				else
 				{
 					gd->switchServer->send(401, "text/html",
-						"Wrong value: " +
-						String(channelNo) + "\r\n");
+						"Wrong parameter: " + param + "\r\n");
 				}
 			}
 			break;
 	}
 }
 
-// Handles GET & POST PIOA requests
-void HandlePIOA()
+// Handles GET & POST Line A requests
+void HandleLineA()
 {
-	return HandlePIO(PIO_A);
+	return HandleLine(LINE_A);
 }
 
-// Handles GET & POST PIOB requests
-void HandlePIOB()
+// Handles GET & POST Line B requests
+void HandleLineB()
 {
-	return HandlePIO(PIO_B);
+	return HandleLine(LINE_B);
 }
 
 // Maps config.html parameters to configuration values.
@@ -208,8 +207,8 @@ void HandleConfig()
 // Maps control.html parameters to lines status.
 String mapControlParameters(const String& key)
 {
-	if (key == "PIO_A_CHECKED") return (getPIO(PIO_A) ? "checked" : ""); else
-	if (key == "PIO_B_CHECKED") return (getPIO(PIO_B) ? "checked" : "");
+	if (key == "LINE_A_CHECKED") return (getLine(LINE_A) ? "checked" : ""); else
+	if (key == "LINE_B_CHECKED") return (getLine(LINE_B) ? "checked" : "");
 }
 
 // Handles HTTP GET & POST /control.html requests
@@ -221,20 +220,20 @@ void HandleControl()
 	// STATUS_UPDATE
 	if (gd->switchServer->hasArg("STATUS_UPDATE"))
 	{
-		// String sA = gd->switchServer->arg("PIO_A");
-		// Serial.print("PIO_A value: "); Serial.println(sA);
+		// String sA = gd->switchServer->arg("LINE_A");
+		// Serial.print("LINE_A value: "); Serial.println(sA);
 		//
-		// String sB = gd->switchServer->arg("PIO_B");
-		// Serial.print("PIO_B value: "); Serial.println(sB);
+		// String sB = gd->switchServer->arg("LINE_B");
+		// Serial.print("LINE_B value: "); Serial.println(sB);
 
-		int lineAstatus = gd->switchServer->hasArg("PIO_A") ? 1 : 0;
-		int lineBstatus = gd->switchServer->hasArg("PIO_B") ? 1 : 0;
+		int lineAstatus = gd->switchServer->hasArg("LINE_A") ? 1 : 0;
+		int lineBstatus = gd->switchServer->hasArg("LINE_B") ? 1 : 0;
 
-		setPIO(PIO_A, lineAstatus);
-		setPIO(PIO_B, lineBstatus);
+		setLine(LINE_A, lineAstatus);
+		setLine(LINE_B, lineBstatus);
 
-		Serial.printf("PIO_A status: %d\n", lineAstatus);
-		Serial.printf("PIO_B status: %d\n", lineBstatus);
+		Serial.printf("LINE_A status: %d\n", lineAstatus);
+		Serial.printf("LINE_B status: %d\n", lineBstatus);
 	}
 
 	ESPTemplateProcessor(*gd->switchServer).send(
@@ -282,8 +281,8 @@ void setup()
 	gd->switchServer->on("/status", HTTPMethod::HTTP_GET, HandleHTTPGetStatus);
 	gd->switchServer->on("/config", HandleConfig);
 	gd->switchServer->on("/control", HandleControl);
-	gd->switchServer->on("/PIOA", HandlePIOA);
-	gd->switchServer->on("/PIOB", HandlePIOB);
+	gd->switchServer->on("/LineA", HandleLineA);
+	gd->switchServer->on("/LineB", HandleLineB);
 
 	gd->switchServer->begin();
 	Serial.println("HTTP server started.");
@@ -291,8 +290,8 @@ void setup()
 	// Set up regulars
 	gd->timer->every(CHECK_SW_UPDATES_EVERY, checkSoftwareUpdates);
 
-	pinMode(PIO_A_PIN, OUTPUT);
-	pinMode(PIO_B_PIN, OUTPUT);
+	pinMode(LINE_A_PIN, OUTPUT);
+	pinMode(LINE_B_PIN, OUTPUT);
 
 	// Use blue led to indicate wifi connection. Thus far off (high level).
 	pinMode(BLUE_LED_PIN, OUTPUT);

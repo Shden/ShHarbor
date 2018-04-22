@@ -6,31 +6,33 @@
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
 </head>
 <body>
-	<ul class="nav nav-tabs">
-		<li class="nav-item">
-			<a class="nav-link" href="/config">Configuration</a>
-		</li>
-		<li class="nav-item">
-			<a class="nav-link active" href="/control">Switch control</a>
-		</li>
-	</ul>
-	<div class="row justify-content-md-center">
-		<div class="col-sm-4">
-			<br>
-			<h2>Switch control</h2>
-			<hr>
-			<form method="POST">
-				<div class="form-check">
-					<input class="form-check-input" type="checkbox" %PIO_A_CHECKED% name="PIO_A" value="ON">
-					<label class="form-check-label" for="PIO_A">Line A</label>
-				</div>
-				<div class="form-check">
-					<input class="form-check-input" type="checkbox" %PIO_B_CHECKED% name="PIO_B" value="ON">
-					<label class="form-check-label" for="PIO_B">Line B</label>
-				</div>
+	<div class="container">
+		<ul class="nav nav-tabs">
+			<li class="nav-item">
+				<a class="nav-link" href="/config">Configuration</a>
+			</li>
+			<li class="nav-item">
+				<a class="nav-link active" href="/control">Switch control</a>
+			</li>
+		</ul>
+		<div class="row justify-content-md-center">
+			<div class="col-sm-4">
 				<br>
-				<button type="submit" name="STATUS_UPDATE" class="btn btn-primary">Update</button>
-			</form>
+				<h2>Switch control</h2>
+				<hr>
+				<form method="POST">
+					<div class="form-check">
+						<input class="form-check-input" type="checkbox" %LINE_A_CHECKED% name="LINE_A" value="ON">
+						<label class="form-check-label" for="LINE_A">Line A</label>
+					</div>
+					<div class="form-check">
+						<input class="form-check-input" type="checkbox" %LINE_B_CHECKED% name="LINE_B" value="ON">
+						<label class="form-check-label" for="LINE_B">Line B</label>
+					</div>
+					<br>
+					<button type="submit" name="STATUS_UPDATE" class="btn btn-primary">Update</button>
+				</form>
+			</div>
 		</div>
 	</div>
 </body>
