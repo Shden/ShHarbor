@@ -15,19 +15,28 @@ void makeSureWiFiConnected(ConnectedESPConfiguration* config, MDNSResponder* mdn
 		{
 			delay(500);
 			Serial.print(".");
+
+			// Blink blue led
+			digitalWrite(BLUE_LED_PIN, !digitalRead(BLUE_LED_PIN));
+
 			if (++connectionAttempts > 40)
 			{
 				Serial.println("Unable to connect.");
 				ESP.restart();
 			}
 		}
+
 		Serial.println();
 		Serial.printf("Connected to: %s\n", config->ssid);
 		Serial.printf("IP address: %s\n", WiFi.localIP().toString().c_str());
+
+		digitalWrite(BLUE_LED_PIN, LOW);
 
 		if (mdns->begin(config->MDNSHost, WiFi.localIP()))
 		{
 			Serial.println("MDNS responder started.");
 		}
 	}
+	// short blinks each 4 seconds
+	digitalWrite(BLUE_LED_PIN, (millis() % 5000) < 4500);
 }

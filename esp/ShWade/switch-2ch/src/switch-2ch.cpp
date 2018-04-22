@@ -11,6 +11,13 @@
 	Toolchain: PlatformIO.
 
 	By denis.afanassiev@gmail.com
+
+	API:
+	curl 192.168.1.15/status
+	curl 192.168.1.15/PIOA
+	curl 192.168.1.15/PIOB
+	curl -X PUT 192.168.1.15/PIOA?state=0
+	curl -X PUT 192.168.1.15/PIOB?state=1
 */
 
 #include <Arduino.h>
@@ -29,11 +36,12 @@
 #define CHECK_SW_UPDATES_EVERY	(60000L*5)	// every 5 min
 #define PIO_A			0
 #define PIO_B			1
-#define PIO_A_PIN		33
-#define PIO_B_PIN		44
+#define PIO_A_PIN		12
+#define PIO_B_PIN		14
 #define PIO_ERROR		-1
+#define OTA_URL_LEN		80
 
-const char* FW_URL_BASE = "http://192.168.1.162/firmware/ShWade/switch-2ch/";
+//const char* FW_URL_BASE = "http://192.168.1.162/firmware/ShWade/switch-2ch/";
 
 void checkSoftwareUpdates();
 
@@ -47,6 +55,7 @@ struct ControllerData
 // will have ssid, secret, initialised, MDNSHost. No build specific data thus far.
 struct ConfigurationData : ConnectedESPConfiguration
 {
+	char			OTA_URL[OTA_URL_LEN + 1];
 } config;
 
 // Maps config.html parameters to configuration values.
@@ -56,7 +65,8 @@ String mapConfigParameters(const String& key)
 	if (key == "PASS") return String(config.secret); else
 	if (key == "MDNS") return String(config.MDNSHost); else
 	if (key == "IP") return WiFi.localIP().toString(); else
-	if (key == "BUILD") return String(FW_VERSION);
+	if (key == "BUILD") return String(FW_VERSION); else
+	if (key == "OTA_URL") return String(config.OTA_URL);
 }
 
 // Returns channel state by number
@@ -148,7 +158,7 @@ void HandlePIOA()
 	return HandlePIO(PIO_A);
 }
 
-// Handles  GET & POST PIOB requests
+// Handles GET & POST PIOB requests
 void HandlePIOB()
 {
 	return HandlePIO(PIO_B);
@@ -177,13 +187,18 @@ void HandleConfig()
 	}
 
 	// GENERAL_UPDATE
-	// if (gd->switchServer->hasArg("GENERAL_UPDATE"))
-	// {
-	// 	// gd->thermosensorServer->arg("API").toCharArray(
-	// 	// 	config.postDataAPIEndpoint, ENDPOINT_URL_LENGTH
-	// 	// );
-	// 	saveConfiguration(&config, sizeof(ConfigurationData));
-	// }
+	if (gd->switchServer->hasArg("GENERAL_UPDATE"))
+	{
+		gd->switchServer->arg("OTA_URL").toCharArray(config.OTA_URL, OTA_URL_LEN);
+		saveConfiguration(&config, sizeof(ConfigurationData));
+	}
+
+	// CHECK_UPDATE_NOW
+	if (gd->switchServer->hasArg("CHECK_UPDATE_NOW"))
+	{
+		Serial.println("Checking software updates available.");
+		checkSoftwareUpdates();
+	}
 
 	ESPTemplateProcessor(*gd->switchServer).send(
 		String("/config.html"),
@@ -201,7 +216,7 @@ void checkSoftwareUpdates()
 		versionInfo.close();
 	}
 
-	updateAll(FW_VERSION, spiffsVersion, FW_URL_BASE);
+	updateAll(FW_VERSION, spiffsVersion, config.OTA_URL);
 }
 
 void setup()
@@ -237,6 +252,13 @@ void setup()
 
 	// Set up regulars
 	gd->timer->every(CHECK_SW_UPDATES_EVERY, checkSoftwareUpdates);
+
+	pinMode(PIO_A_PIN, OUTPUT);
+	pinMode(PIO_B_PIN, OUTPUT);
+
+	// Use blue led to indicate wifi connection. Thus far off (high level).
+	pinMode(BLUE_LED_PIN, OUTPUT);
+	digitalWrite(BLUE_LED_PIN, HIGH);
 }
 
 void loop()

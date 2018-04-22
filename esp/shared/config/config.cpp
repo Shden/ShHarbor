@@ -78,9 +78,6 @@ void loadConfiguration(ConnectedESPConfiguration* configuration, size_t configSi
 {
 	// Read what's in EEPROM
 	loadStruct(configuration, configSize);
-	// EEPROM.begin(configSize);
-	// EEPROM.get(0, *configuration);
-	// EEPROM.end();
 
 	// // Debug:
 	// Serial.printf("SSID configured: %s\n", configuration->ssid);
@@ -98,9 +95,5 @@ void loadConfiguration(ConnectedESPConfiguration* configuration, size_t configSi
 // Save controller configuration to EEPROM
 void saveConfiguration(ConnectedESPConfiguration* configuration, size_t configSize)
 {
-	// EEPROM.begin(configSize);
-	// EEPROM.put(0, *configuration);
-	// EEPROM.commit();
-	// EEPROM.end();
 	storeStruct(configuration, configSize);
 }

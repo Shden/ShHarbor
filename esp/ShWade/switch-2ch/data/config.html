@@ -7,9 +7,9 @@
 </head>
 <body>
 	<div class="row justify-content-md-center">
-		<div class="col-sm-4">
+		<div class="col-sm-5">
 			<br>
-			<h1>Network setup</h1>
+			<h2>Network setup</h2>
 			<hr>
 			<form method="POST">
 				<div class="form-row">
@@ -26,21 +26,34 @@
 					<label for="mDNS">mDNS Name</label>
 					<input type="text" class="form-control" name="MDNS" value="%MDNS%" placeholder="mDNS Name">
 				</div>
-				<div class="form-group">
-					<label for="IP">IP address</label>
-					<input type="text" class="form-control" name="IP" value="%IP%" readonly>
-				</div>
-				<div class="form-group">
-					<label for="BUILD">Build</label>
-					<input type="text" class="form-control" name="BUILD" value="%BUILD%" readonly>
-				</div>
 				<button type="submit" name="NETWORK_UPDATE" class="btn btn-danger">Update network configuration and reconnect</button>
 			</form>
 			<br>
-			<h1>General settings</h1>
+			<h2>Device Information</h2>
+			<hr>
+			<div class="form-row">
+				<div class="form-group col-md-6">
+					<label for="IP">IP address</label>
+					<input type="text" class="form-control" name="IP" value="%IP%" readonly>
+				</div>
+				<div class="form-group col-md-6">
+					<label for="BUILD">Build</label>
+					<input type="text" class="form-control" name="BUILD" value="%BUILD%" readonly>
+				</div>
+			</div>
+			<br>
+			<h2>General settings</h2>
 			<hr>
 			<form method="POST">
-				<br>
+				<div class="form-group">
+					<label for="mDNS">OTA URL</label>
+					<div class="input-group mb-3">
+						<input type="text" class="form-control" name="OTA_URL" value="%OTA_URL%" placeholder="OTA URL">
+						<div class="input-group-append">
+							<button type="submit" name="CHECK_UPDATE_NOW" class="btn btn-outline-secondary" type="button">Check now</button>
+						</div>
+					</div>
+				</div>
 				<button type="submit" name="GENERAL_UPDATE" class="btn btn-primary">Update general settings</button>
 			</form>
 		</div>
