@@ -58,17 +58,6 @@ struct ConfigurationData : ConnectedESPConfiguration
 	char			OTA_URL[OTA_URL_LEN + 1];
 } config;
 
-// Maps config.html parameters to configuration values.
-String mapConfigParameters(const String& key)
-{
-	if (key == "SSID") return String(config.ssid); else
-	if (key == "PASS") return String(config.secret); else
-	if (key == "MDNS") return String(config.MDNSHost); else
-	if (key == "IP") return WiFi.localIP().toString(); else
-	if (key == "BUILD") return String(FW_VERSION); else
-	if (key == "OTA_URL") return String(config.OTA_URL);
-}
-
 // Returns channel state by number
 int getPIO(int channelNo)
 {
@@ -164,6 +153,17 @@ void HandlePIOB()
 	return HandlePIO(PIO_B);
 }
 
+// Maps config.html parameters to configuration values.
+String mapConfigParameters(const String& key)
+{
+	if (key == "SSID") return String(config.ssid); else
+	if (key == "PASS") return String(config.secret); else
+	if (key == "MDNS") return String(config.MDNSHost); else
+	if (key == "IP") return WiFi.localIP().toString(); else
+	if (key == "BUILD") return String(FW_VERSION); else
+	if (key == "OTA_URL") return String(config.OTA_URL);
+}
+
 // Handles HTTP GET & POST /config.html requests
 void HandleConfig()
 {
@@ -205,6 +205,43 @@ void HandleConfig()
 		mapConfigParameters);
 }
 
+// Maps control.html parameters to lines status.
+String mapControlParameters(const String& key)
+{
+	if (key == "PIO_A_CHECKED") return (getPIO(PIO_A) ? "checked" : ""); else
+	if (key == "PIO_B_CHECKED") return (getPIO(PIO_B) ? "checked" : "");
+}
+
+// Handles HTTP GET & POST /control.html requests
+void HandleControl()
+{
+	// Warning: uses global data
+	ControllerData *gd = &GD;
+
+	// STATUS_UPDATE
+	if (gd->switchServer->hasArg("STATUS_UPDATE"))
+	{
+		// String sA = gd->switchServer->arg("PIO_A");
+		// Serial.print("PIO_A value: "); Serial.println(sA);
+		//
+		// String sB = gd->switchServer->arg("PIO_B");
+		// Serial.print("PIO_B value: "); Serial.println(sB);
+
+		int lineAstatus = gd->switchServer->hasArg("PIO_A") ? 1 : 0;
+		int lineBstatus = gd->switchServer->hasArg("PIO_B") ? 1 : 0;
+
+		setPIO(PIO_A, lineAstatus);
+		setPIO(PIO_B, lineBstatus);
+
+		Serial.printf("PIO_A status: %d\n", lineAstatus);
+		Serial.printf("PIO_B status: %d\n", lineBstatus);
+	}
+
+	ESPTemplateProcessor(*gd->switchServer).send(
+		String("/control.html"),
+		mapControlParameters);
+}
+
 // Go check if there is a new firmware or SPIFFS got available.
 void checkSoftwareUpdates()
 {
@@ -244,6 +281,7 @@ void setup()
 
 	gd->switchServer->on("/status", HTTPMethod::HTTP_GET, HandleHTTPGetStatus);
 	gd->switchServer->on("/config", HandleConfig);
+	gd->switchServer->on("/control", HandleControl);
 	gd->switchServer->on("/PIOA", HandlePIOA);
 	gd->switchServer->on("/PIOB", HandlePIOB);
 
