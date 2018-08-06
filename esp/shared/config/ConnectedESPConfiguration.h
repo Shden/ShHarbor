@@ -1,5 +1,5 @@
-#ifndef CONFIG_H
-#define CONFIG_H
+#ifndef CONNECTED_ESP_CONFIGURATION_H
+#define CONNECTED_ESP_CONFIGURATION_H
 
 #include <Arduino.h>
 

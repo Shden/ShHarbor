@@ -1,4 +1,5 @@
-#include "config.h"
+#include <ConnectedESPConfiguration.h>
+#include <Arduino.h>
 #include <EEPROM.h>
 
 // Get character sting from terminal.
@@ -38,7 +39,8 @@ void getWiFiConfigurationTTY(ConnectedESPConfiguration* configuration)
 	readString(configuration->secret, SECRET_LEN);
 
 	// Defaults
-	//strncpy(configuration->MDNSHost, "ESP" + ESP.getChipId(), MDNS_HOST_LEN);
+	String defaultMDNSHostName = "SH_ESP_" + ESP.getChipId();
+	strncpy(configuration->MDNSHost, defaultMDNSHostName.c_str(), MDNS_HOST_LEN);
 
 	// Initisalised flag
 	configuration->initialised = EEPROM_INIT_CODE;

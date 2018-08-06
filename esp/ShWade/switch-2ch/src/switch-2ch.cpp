@@ -24,13 +24,12 @@
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h>
 #include <ESP8266WebServer.h>
-#include <ESP8266mDNS.h>
+#include <ESP8266HTTPClient.h>
 #include <Timer.h>
 #include <OTA.h>
-#include <config.h>
-#include <wifi.h>
+#include <ConnectedESPConfiguration.h>
+#include <WiFiManager.h>
 #include <ESPTemplateProcessor.h>
-#include <ESP8266HTTPClient.h>
 
 #define WEB_SERVER_PORT         80
 #define CHECK_SW_UPDATES_EVERY	(60000L*5)	// every 5 min
@@ -48,11 +47,10 @@ void checkSoftwareUpdates();
 struct ControllerData
 {
 	ESP8266WebServer*       switchServer;
-	MDNSResponder*          mdns;
 	Timer*                  timer;
 } GD;
 
-// will have ssid, secret, initialised, MDNSHost. No build specific data thus far.
+// will have ssid, secret, initialised, MDNS host name.
 struct ConfigurationData : ConnectedESPConfiguration
 {
 	char			OTA_URL[OTA_URL_LEN + 1];
@@ -137,6 +135,9 @@ void HandleLine(int lineNo)
 				}
 			}
 			break;
+
+		default:
+			break;
 	}
 }
 
@@ -160,7 +161,8 @@ String mapConfigParameters(const String& key)
 	if (key == "MDNS") return String(config.MDNSHost); else
 	if (key == "IP") return WiFi.localIP().toString(); else
 	if (key == "BUILD") return String(FW_VERSION); else
-	if (key == "OTA_URL") return String(config.OTA_URL);
+	if (key == "OTA_URL") return String(config.OTA_URL); else
+	return "Mapping value undefined.";
 }
 
 // Handles HTTP GET & POST /config.html requests
@@ -182,7 +184,9 @@ void HandleConfig()
 		gd->switchServer->sendHeader("Location", String("/config"), true);
 		gd->switchServer->send(302, "text/plain", "");
 
+		// Try connecting with new credentials
 		WiFi.disconnect();
+		WiFiManager::handleWiFiConnectivity();
 	}
 
 	// GENERAL_UPDATE
@@ -208,7 +212,8 @@ void HandleConfig()
 String mapControlParameters(const String& key)
 {
 	if (key == "LINE_A_CHECKED") return (getLine(LINE_A) ? "checked" : ""); else
-	if (key == "LINE_B_CHECKED") return (getLine(LINE_B) ? "checked" : "");
+	if (key == "LINE_B_CHECKED") return (getLine(LINE_B) ? "checked" : ""); else
+	return "Mapping value undefined.";
 }
 
 // Handles HTTP GET & POST /control.html requests
@@ -258,6 +263,7 @@ void checkSoftwareUpdates()
 void setup()
 {
 	Serial.begin(115200);
+//	Serial.setDebugOutput(true);
 	Serial.println("Initialisation.");
 	Serial.printf("2-channel switch build %d.\n", FW_VERSION);
 
@@ -269,9 +275,10 @@ void setup()
 
 	gd->switchServer = new ESP8266WebServer(WEB_SERVER_PORT);
 	gd->timer = new Timer();
-	gd->mdns = new MDNSResponder();
 
-	makeSureWiFiConnected(&config, gd->mdns);
+	// Initialise WiFi entity that will handle connectivity. We don't
+	// care of WiFi anymore, all handled inside it
+	WiFiManager::init(&config);
 
 	if (SPIFFS.begin())
 		Serial.println("SPIFFS mount succesfull.");
@@ -292,17 +299,13 @@ void setup()
 
 	pinMode(LINE_A_PIN, OUTPUT);
 	pinMode(LINE_B_PIN, OUTPUT);
-
-	// Use blue led to indicate wifi connection. Thus far off (high level).
-	pinMode(BLUE_LED_PIN, OUTPUT);
-	digitalWrite(BLUE_LED_PIN, HIGH);
 }
 
 void loop()
 {
 	ControllerData *gd = &GD;
 
-	makeSureWiFiConnected(&config, gd->mdns);
 	gd->switchServer->handleClient();
 	gd->timer->update();
+	WiFiManager::update();
 }
