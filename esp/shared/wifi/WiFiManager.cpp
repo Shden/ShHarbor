@@ -1,3 +1,20 @@
+/*
+How it works:
+
+WiFiManager is a module to support WiFi connectivity for ESP chip. Firts thing,
+it shoud be initialised by calling init(cfg) function that receives configuration
+structure with wifi credentials and other info. Init creates internal timer and
+tries to connect to the wifi by calling handleWiFiConnectivity(). After init,
+handleWiFiConnectivity() is called by timer with RECONNECTION_CYCLE interval.
+
+Each reconnection cycle starts with checking connection status. If wifi is in
+WL_CONNECTED, we are done. If not, we use current credentials to do
+MAX_CONNECTION_ATTEMPTS to connect. If we managed to connect, we are done. If
+not, a software access point (AP) is initialised for configuration and credentials
+update. AP name as follows: [mDNS name of the module]_[ChipId].
+
+Module should be in the loop() cycle via update() entry point.
+*/
 #include <WiFiManager.h>
 #include <ESP8266mDNS.h>
 #include <Timer.h>
@@ -13,6 +30,8 @@ namespace WiFiManager
 	ConnectedESPConfiguration* config;
 	MDNSResponder* mDNS = new MDNSResponder();;
 	Timer* connectionPulse = new Timer();
+
+	// This is only for AP mode to redirect ALL domain request to configuration page
 	DNSServer* dnsServer = NULL;
 
 	void init(ConnectedESPConfiguration* cfg)
@@ -33,6 +52,8 @@ namespace WiFiManager
 		connectionPulse->update();
 		if (dnsServer)
 			dnsServer->processNextRequest();
+		// 	// short blinks each 4 seconds
+		// 	digitalWrite(BLUE_LED_PIN, (millis() % 5000) < 4500);
 	}
 
 	// Ensure wifi connectivity
@@ -78,7 +99,7 @@ namespace WiFiManager
 				// True will switch the soft-AP mode off
 				WiFi.softAPdisconnect(true);
 
-				// Blue led is ON as we are now connected
+				// // Blue led is ON as we are now connected
 				digitalWrite(BLUE_LED_PIN, LOW);
 
 				if (dnsServer) {
@@ -109,7 +130,5 @@ namespace WiFiManager
 				dnsServer->start(DNS_PORT, "*", WiFi.softAPIP());
 			}
 		}
-	// 	// short blinks each 4 seconds
-	// 	digitalWrite(BLUE_LED_PIN, (millis() % 5000) < 4500);
 	}
 }
