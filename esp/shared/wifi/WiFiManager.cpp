@@ -89,11 +89,15 @@ namespace WiFiManager
 			else
 			{
 				Serial.println("Fallback to AP configuration.");
-				Serial.printf("Configuation access point: %s\n", config->MDNSHost);
-				WiFi.mode(WIFI_AP);
-				WiFi.softAP(config->MDNSHost);
-				Serial.printf("Configuation access point IP address: %s\n", WiFi.softAPIP().toString().c_str());
 
+				String chipID = String(ESP.getChipId(), HEX);
+				chipID.toUpperCase();
+				String APName = String(config->MDNSHost) + String("_") + chipID;
+				Serial.printf("Configuation access point: %s\n", APName.c_str());
+				WiFi.mode(WIFI_AP);
+				WiFi.softAP(APName.c_str());
+
+				Serial.printf("Configuation access point IP address: %s\n", WiFi.softAPIP().toString().c_str());
 				Serial.printf("Next WiFi connection attempt in %d ms.\n", RECONNECTION_CYCLE);
 
 				// Blue led is OFF as we are disconnected
