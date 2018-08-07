@@ -1,16 +1,19 @@
 #include <WiFiManager.h>
 #include <ESP8266mDNS.h>
 #include <Timer.h>
+#include <DNSServer.h>
 
 #define MAX_CONNECTION_ATTEMPTS		32
-#define RECONNECTION_CYCLE		4 * 60 * 1000	// each 2 minutes
+#define RECONNECTION_CYCLE		4 * 60 * 1000	// each 4 minutes
 #define BLUE_LED_PIN			2		// HIGH = off, LOW = on.
+#define DNS_PORT			53		// DNS server
 
 namespace WiFiManager
 {
 	ConnectedESPConfiguration* config;
 	MDNSResponder* mDNS = new MDNSResponder();;
 	Timer* connectionPulse = new Timer();
+	DNSServer* dnsServer = NULL;
 
 	void init(ConnectedESPConfiguration* cfg)
 	{
@@ -28,6 +31,8 @@ namespace WiFiManager
 	void update()
 	{
 		connectionPulse->update();
+		if (dnsServer)
+			dnsServer->processNextRequest();
 	}
 
 	// Ensure wifi connectivity
@@ -36,6 +41,7 @@ namespace WiFiManager
 		if (WL_CONNECTED != WiFi.status())
 		{
 			Serial.println("Disconnected.");
+			WiFi.mode(WIFI_STA);
 			WiFi.begin(config->ssid, config->secret);
 			Serial.print("Connecting to WiFi: ");
 
@@ -74,11 +80,17 @@ namespace WiFiManager
 
 				// Blue led is ON as we are now connected
 				digitalWrite(BLUE_LED_PIN, LOW);
+
+				if (dnsServer) {
+					delete dnsServer;
+					dnsServer = NULL;
+				}
 			}
 			else
 			{
 				Serial.println("Fallback to AP configuration.");
 				Serial.printf("Configuation access point: %s\n", config->MDNSHost);
+				WiFi.mode(WIFI_AP);
 				WiFi.softAP(config->MDNSHost);
 				Serial.printf("Configuation access point IP address: %s\n", WiFi.softAPIP().toString().c_str());
 
@@ -86,6 +98,11 @@ namespace WiFiManager
 
 				// Blue led is OFF as we are disconnected
 				digitalWrite(BLUE_LED_PIN, HIGH);
+
+				/* Setup the DNS server redirecting all the domains to the apIP */
+				dnsServer = new DNSServer();
+				dnsServer->setErrorReplyCode(DNSReplyCode::NoError);
+				dnsServer->start(DNS_PORT, "*", WiFi.softAPIP());
 			}
 		}
 	// 	// short blinks each 4 seconds

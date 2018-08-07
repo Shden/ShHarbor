@@ -211,8 +211,8 @@ void HandleConfig()
 // Maps control.html parameters to lines status.
 String mapControlParameters(const String& key)
 {
-	if (key == "LINE_A_CHECKED") return (getLine(LINE_A) ? "checked" : ""); else
-	if (key == "LINE_B_CHECKED") return (getLine(LINE_B) ? "checked" : ""); else
+	if (key == "LINE_A_CHECKED") return (getLine(LINE_A) ? "checked" : "?"); else
+	if (key == "LINE_B_CHECKED") return (getLine(LINE_B) ? "checked" : "?"); else
 	return "Mapping value undefined.";
 }
 
@@ -290,6 +290,17 @@ void setup()
 	gd->switchServer->on("/control", HandleControl);
 	gd->switchServer->on("/LineA", HandleLineA);
 	gd->switchServer->on("/LineB", HandleLineB);
+
+	// captive pages
+	gd->switchServer->on("", HandleConfig);
+	gd->switchServer->on("/", HandleConfig);
+	// gd->switchServer->on("/wifi", HandleConfig);
+	// gd->switchServer->on("/0wifi", HandleConfig);
+
+	// css served from SPIFFS
+	gd->switchServer->serveStatic(
+		"/bootstrap/4.0.0/css/bootstrap.min.css", SPIFFS,
+		"/bootstrap.min.css");
 
 	gd->switchServer->begin();
 	Serial.println("HTTP server started.");
