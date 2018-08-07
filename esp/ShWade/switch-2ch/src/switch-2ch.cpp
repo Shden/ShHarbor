@@ -7,6 +7,7 @@
 	- REST API to control each of the channels.
 	- OTA firmware update.
 	- Built in configuration web UI at /config.
+	- WiFi access point to configure and troubleshoot.
 
 	Toolchain: PlatformIO.
 
@@ -263,7 +264,6 @@ void checkSoftwareUpdates()
 void setup()
 {
 	Serial.begin(115200);
-//	Serial.setDebugOutput(true);
 	Serial.println("Initialisation.");
 	Serial.printf("2-channel switch build %d.\n", FW_VERSION);
 
@@ -294,8 +294,6 @@ void setup()
 	// captive pages
 	gd->switchServer->on("", HandleConfig);
 	gd->switchServer->on("/", HandleConfig);
-	// gd->switchServer->on("/wifi", HandleConfig);
-	// gd->switchServer->on("/0wifi", HandleConfig);
 
 	// css served from SPIFFS
 	gd->switchServer->serveStatic(
