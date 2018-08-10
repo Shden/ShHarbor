@@ -41,8 +41,6 @@
 #define WRONG_LINE_NUMBER	-1
 #define OTA_URL_LEN		80
 
-//const char* FW_URL_BASE = "http://192.168.1.162/firmware/ShWade/switch-2ch/";
-
 void checkSoftwareUpdates();
 
 struct ControllerData

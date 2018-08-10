@@ -37,8 +37,6 @@
 #define ENDPOINT_URL_LENGTH	80
 #define OTA_URL_LEN		80
 
-//const char* FW_URL_BASE = "http://192.168.1.162/firmware/ShWade/thermosensor/";
-
 void checkSoftwareUpdates();
 
 struct ControllerData
@@ -78,19 +76,25 @@ void postTemperatureUpdate()
 
 	if (strlen(config.postDataAPIEndpoint))
 	{
-		// linked swich update HTTP reqiest
-		String postDataURL =
+		// API endpoint URL to post temperature update
+		String endpointURL =
 			String("http://") +
-			String(config.postDataAPIEndpoint) +
-			String("?temperature=") + String(temp, 2) +
-			String("&sensor=") + String(gd->sensorAddress);
+			String(config.postDataAPIEndpoint);
+		Serial.print("API endpoint URL: ");
+		Serial.println(endpointURL);
 
-		Serial.print("Invocation URL: ");
-		Serial.println(postDataURL);
+		String jsonPayload =
+			String("[{ \"sensorId\" : \"") +
+			String(gd->sensorAddress) +
+			String("\", \"temperature\" : ") +
+			String(temp, 2) +
+			String(" }]");
+		Serial.print("JSON payload: ");
+		Serial.println(jsonPayload);
 
 		HTTPClient httpClient;
-		httpClient.begin(postDataURL);
-		int httpCode = httpClient.GET();
+		httpClient.begin(endpointURL);
+		int httpCode = httpClient.POST(jsonPayload);
 		Serial.printf("Responce code: %d\n", httpCode);
 		httpClient.end();
 	}
@@ -120,6 +124,7 @@ String mapConfigParameters(const String& key)
 	if (key == "IP") return WiFi.localIP().toString(); else
 	if (key == "BUILD") return String(FW_VERSION); else
 	if (key == "API") return String(config.postDataAPIEndpoint); else
+	if (key == "OTA_URL") return String(config.OTA_URL); else
 	return "Mapping value undefined.";
 }
 
