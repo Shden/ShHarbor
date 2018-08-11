@@ -15,6 +15,10 @@
 	By denis.afanassiev@gmail.com
 
 	API:
+	curl 192.168.1.15/status
+
+	TODO:
+
 */
 
 #include <Arduino.h>
@@ -31,9 +35,9 @@
 #include <ESPTemplateProcessor.h>
 
 #define WEB_SERVER_PORT         80
-#define CHECK_SW_UPDATES_EVERY	(60000L*5)	// every 5 min
+#define CHECK_SW_UPDATES_EVERY	(5 * 60 * 1000L)	// every 5 min
+#define DEFAULT_POST_TEMP_EVERY	(60 * 1000L)		// default: every minute
 #define ONE_WIRE_PIN            5
-#define POST_TEMP_EVERY       	(10000L)        // every 10 sec
 #define ENDPOINT_URL_LENGTH	80
 #define OTA_URL_LEN		80
 
@@ -47,10 +51,15 @@ struct ControllerData
 	Timer*                  timer;
 } GD;
 
-// will have ssid, secret, initialised, MDNSHost + API endpoit to post data.
+/* Will have ssid, secret, initialised, MDNSHost plus:
+ *	- API endpoit to post temperature updates,
+ *	- Period of temperature updates posting (in seconds),
+ *	- OTA OTA_URL.
+ */
 struct ConfigurationData : ConnectedESPConfiguration
 {
 	char			postDataAPIEndpoint[ENDPOINT_URL_LENGTH + 1];
+	uint16_t		postTemperatureEvery;
 	char			OTA_URL[OTA_URL_LEN + 1];
 } config;
 
@@ -77,11 +86,8 @@ void postTemperatureUpdate()
 	if (strlen(config.postDataAPIEndpoint))
 	{
 		// API endpoint URL to post temperature update
-		String endpointURL =
-			String("http://") +
-			String(config.postDataAPIEndpoint);
 		Serial.print("API endpoint URL: ");
-		Serial.println(endpointURL);
+		Serial.println(config.postDataAPIEndpoint);
 
 		String jsonPayload =
 			String("[{ \"sensorId\" : \"") +
@@ -93,7 +99,7 @@ void postTemperatureUpdate()
 		Serial.println(jsonPayload);
 
 		HTTPClient httpClient;
-		httpClient.begin(endpointURL);
+		httpClient.begin(config.postDataAPIEndpoint);
 		int httpCode = httpClient.POST(jsonPayload);
 		Serial.printf("Responce code: %d\n", httpCode);
 		httpClient.end();
@@ -118,30 +124,20 @@ void HandleHTTPGetStatus()
 // Maps config.html parameters to configuration values.
 String mapConfigParameters(const String& key)
 {
+	// Warning: uses global data.
+	ControllerData *gd = &GD;
+
 	if (key == "SSID") return String(config.ssid); else
 	if (key == "PASS") return String(config.secret); else
 	if (key == "MDNS") return String(config.MDNSHost); else
 	if (key == "IP") return WiFi.localIP().toString(); else
 	if (key == "BUILD") return String(FW_VERSION); else
+	if (key == "DS1820ID") return String(gd->sensorAddress); else
 	if (key == "API") return String(config.postDataAPIEndpoint); else
+	if (key == "POST_TEMP_EVERY") return String(config.postTemperatureEvery); else
 	if (key == "OTA_URL") return String(config.OTA_URL); else
 	return "Mapping value undefined.";
 }
-
-// // Debug request arguments printout.
-// void dbgPostPrintout()
-// {
-// 	// Warning: uses global data
-// 	ControllerData *gd = &GD;
-//
-// 	for (int i=0; i < gd->thermosensorServer->args(); i++)
-// 	{
-// 		Serial.print(gd->thermosensorServer->argName(i));
-// 		Serial.print(": ");
-// 		Serial.print(gd->thermosensorServer->arg(i));
-// 		Serial.println();
-// 	}
-// }
 
 // Handles HTTP GET & POST /config.html requests
 void HandleConfig()
@@ -172,10 +168,12 @@ void HandleConfig()
 	// GENERAL_UPDATE
 	if (gd->thermosensorServer->hasArg("GENERAL_UPDATE"))
 	{
-		gd->thermosensorServer->arg("OTA_URL").toCharArray(
-			config.OTA_URL, OTA_URL_LEN);
 		gd->thermosensorServer->arg("API").toCharArray(
 			config.postDataAPIEndpoint, ENDPOINT_URL_LENGTH);
+		config.postTemperatureEvery =
+			gd->thermosensorServer->arg("POST_TEMP_EVERY").toInt();
+		gd->thermosensorServer->arg("OTA_URL").toCharArray(
+			config.OTA_URL, OTA_URL_LEN);
 		saveConfiguration(&config, sizeof(ConfigurationData));
 	}
 
@@ -245,14 +243,16 @@ void setup()
 
 	// css served from SPIFFS
 	gd->thermosensorServer->serveStatic(
-		"/bootstrap/4.0.0/css/bootstrap.min.css", SPIFFS,
-		"/bootstrap.min.css");
+		"/bootstrap.min.css", SPIFFS, "/bootstrap.min.css");
 
 	gd->thermosensorServer->begin();
 	Serial.println("HTTP server started.");
 
 	// Set up regulars
-	gd->timer->every(POST_TEMP_EVERY, postTemperatureUpdate);
+	long postTemperatureEvery = (config.postTemperatureEvery)
+		? 1000L * config.postTemperatureEvery
+		: DEFAULT_POST_TEMP_EVERY;
+	gd->timer->every(postTemperatureEvery, postTemperatureUpdate);
 	gd->timer->every(CHECK_SW_UPDATES_EVERY, checkSoftwareUpdates);
 }
 

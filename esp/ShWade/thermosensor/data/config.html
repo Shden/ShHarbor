@@ -3,7 +3,7 @@
 	<title>Thermostat configuration</title>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-	<link rel="stylesheet" href="/bootstrap/4.0.0/css/bootstrap.min.css">
+	<link rel="stylesheet" href="bootstrap.min.css">
 </head>
 <body>
 	<div class="row justify-content-md-center">
@@ -29,7 +29,7 @@
 				<button type="submit" name="NETWORK_UPDATE" class="btn btn-danger">Update network configuration and reconnect</button>
 			</form>
 			<br>
-			<h2>Device Information</h2>
+			<h1>Device Information</h1>
 			<hr>
 			<div class="form-row">
 				<div class="form-group col-md-6">
@@ -40,19 +40,32 @@
 					<label for="BUILD">Build</label>
 					<input type="text" class="form-control" name="BUILD" value="%BUILD%" readonly>
 				</div>
+				<div class="form-group col-md-6">
+					<label for="DS1820ID">DS1820 ID</label>
+					<input type="text" class="form-control" name="DS1820ID" value="%DS1820ID%" readonly>
+				</div>
 			</div>
 			<br>
 			<h1>General settings</h1>
 			<hr>
 			<form method="POST">
 				<div class="form-group">
-					<label for="API">Report temperature API</label>
-					<input type="text" class="form-control" name="API" value="%API%" placeholder="API endpoint or blank">
+					<label for="API">Post temperature API endpoint</label>
+					<input type="url" class="form-control" name="API" value="%API%" placeholder="API endpoint or blank">
+				</div>
+				<div class="form-group">
+					<label for="POST_TEMP_EVERY">Post temperature period</label>
+					<div class="input-group mb-3">
+						<input type="number" min="5" required class="form-control" name="POST_TEMP_EVERY" value="%POST_TEMP_EVERY%" placeholder="Post temperature each number of seconds">
+						<div class="input-group-append">
+							<span class="input-group-text">seconds</span>
+						</div>
+					</div>
 				</div>
 				<div class="form-group">
 					<label for="OTA_URL">OTA URL</label>
 					<div class="input-group mb-3">
-						<input type="text" class="form-control" name="OTA_URL" value="%OTA_URL%" placeholder="OTA URL">
+						<input type="url" class="form-control" name="OTA_URL" value="%OTA_URL%" placeholder="OTA URL">
 						<div class="input-group-append">
 							<button type="submit" name="CHECK_UPDATE_NOW" class="btn btn-outline-secondary" type="button">Check now</button>
 						</div>
