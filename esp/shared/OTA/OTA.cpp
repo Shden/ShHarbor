@@ -71,7 +71,7 @@ void updateFirmware(int currentVersion, const char* repositoryBaseUrl)
 		// New firmware URL
 		String newFirmwareURL = repositoryBaseUrl;
 		newFirmwareURL.concat("FW.bin");
-		Serial.print("Updating SPIFFS using image URL: ");
+		Serial.print("Updating firmware using image from the URL: ");
 		Serial.println(newFirmwareURL);
 
 		handeUpdateResult(ESPhttpUpdate.update(newFirmwareURL));
@@ -87,7 +87,7 @@ void updateSpiffs(int currentVersion, const char* repositoryBaseUrl)
 		// New SPIFFS URL
 		String newSpiffsURL = repositoryBaseUrl;
 		newSpiffsURL.concat("SPIFFS.bin");
-		Serial.print("Updating SPIFFS using image URL: ");
+		Serial.print("Updating SPIFFS using image from the URL: ");
 		Serial.println(newSpiffsURL);
 
 		handeUpdateResult(ESPhttpUpdate.updateSpiffs(newSpiffsURL));
