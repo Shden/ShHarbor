@@ -17,8 +17,6 @@
 	API:
 	curl 192.168.1.15/status
 
-	TODO:
-
 */
 
 #include <Arduino.h>
