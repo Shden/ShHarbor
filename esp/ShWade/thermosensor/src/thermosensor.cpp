@@ -1,4 +1,6 @@
 /*
+	Home: ShWade.
+
 	Thermosensor module based on ESP8266 SoC for ShWade temperature
 	sensor socket substitute.
 
@@ -52,7 +54,7 @@ struct ControllerData
 /* Will have ssid, secret, initialised, MDNSHost plus:
  *	- API endpoit to post temperature updates,
  *	- Period of temperature updates posting (in seconds),
- *	- OTA OTA_URL.
+ *	- OTA URL.
  */
 struct ConfigurationData : ConnectedESPConfiguration
 {
@@ -104,7 +106,7 @@ void postTemperatureUpdate()
 	}
 }
 
-// HTTP GET /Status
+// HTTP GET /status
 void HandleHTTPGetStatus()
 {
 	// Warning: uses global data
@@ -205,7 +207,7 @@ void setup()
 {
 	Serial.begin(115200);
 	Serial.println("Initialisation.");
-	Serial.printf("Themperature sensor build %d.\n", FW_VERSION);
+	Serial.printf("ShWade temperature sensor build %d.\n", FW_VERSION);
 
 	Serial.println("Configuration loading.");
 	loadConfiguration(&config, sizeof(ConfigurationData));

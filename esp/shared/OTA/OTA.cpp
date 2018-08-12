@@ -60,6 +60,9 @@ void handeUpdateResult(t_httpUpdate_return updateReturnCode)
 		case HTTP_UPDATE_NO_UPDATES:
 			Serial.println("HTTP_UPDATE_NO_UPDATES");
 			break;
+
+		default:
+			break;
 	}
 }
 

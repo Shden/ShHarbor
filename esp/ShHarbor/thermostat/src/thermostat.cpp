@@ -1,4 +1,6 @@
 /*
+	Home: ShHarbor.
+
 	Thermostat module based on ESP8266 SoC.
 
 	Features:
@@ -6,11 +8,15 @@
 	- AC 220V power control.
 	- REST API to monitor/contol heating parameters.
 	- OTA firmware update.
-	- Built in configuration web UI at /config
+	- Built in configuration web UI at /config.
+	- WiFi access point to configure and troubleshoot.
 
 	Toolchain: PlatformIO.
 
 	By denis.afanassiev@gmail.com
+
+	API:
+	curl 192.168.1.15/Status
 */
 
 #include <Arduino.h>
@@ -21,8 +27,8 @@
 #include <Timer.h>
 #include <DS1820.h>
 #include <OTA.h>
-#include <config.h>
-#include <wifi.h>
+#include <ConnectedESPConfiguration.h>
+#include <WiFiManager.h>
 #include <ESPTemplateProcessor.h>
 
 #define ONE_WIRE_PIN            5
@@ -33,26 +39,29 @@
 #define CHECK_SW_UPDATES_EVERY	(60000L*5)	// every 5 min
 #define DEFAULT_TARGET_TEMP	28.0
 #define DEFAULT_ACTIVE		0
-#define MDNS_HOST               "HB-THERMOSTAT"
-
-const char* FW_URL_BASE = "http://192.168.1.200/firmware/ShHarbor/thermostat/";
+#define OTA_URL_LEN		80
 
 void checkSoftwareUpdates();
 
 struct ControllerData
 {
 	TemperatureSensor*      temperatureSensor;
+	// char			sensorAddress[20]; ????
 	ESP8266WebServer*       thermostatServer;
-	MDNSResponder*          mdns;
 	Timer*                  timer;
 	uint8_t                 heatingOn;
 } GD;
 
-// will have ssid, secret, initialised, MDNSHost plus what is defined here
+/* will have ssid, secret, initialised, MDNSHost plus:
+ *	- target temperature,
+ *	- active flag,
+ *	- OTA URL.
+ */
 struct ConfigurationData : ConnectedESPConfiguration
 {
 	float                   targetTemp;
 	int8_t			active;
+	char			OTA_URL[OTA_URL_LEN + 1];
 } config;
 
 // Go to sensor and get current temperature.
@@ -67,9 +76,6 @@ float getTemperature()
 // Update temperatureSensor internal data
 void temperatureUpdate()
 {
-	// Warning: uses global data.
-	ControllerData *gd = &GD;
-
 	float temp = getTemperature();
 
 	// Here goes workaround for %f which wasnt working right.
@@ -87,7 +93,7 @@ void controlHeating()
 	Serial.printf("Heating state: %d\n", gd->heatingOn);
 }
 
-// HTTP GET /Status
+// HTTP GET /status
 void HandleHTTPGetStatus()
 {
 	// Warning: uses global data
@@ -163,28 +169,30 @@ String mapConfigParameters(const String& key)
 	if (key == "IP") return WiFi.localIP().toString(); else
 	if (key == "BUILD") return String(FW_VERSION); else
 	if (key == "T_TEMP") return String(config.targetTemp); else
-	if (key == "CHECKED") return config.active ? "checked" : "";
+	if (key == "CHECKED") return config.active ? "checked" : "unchecked"; else
+	if (key == "OTA_URL") return String(config.OTA_URL); else
+	return "Mapping value undefined.";
 }
 
-// Debug request arguments printout.
-void dbgPostPrintout()
-{
-	// Warning: uses global data
-	ControllerData *gd = &GD;
+// // Debug request arguments printout.
+// void dbgPostPrintout()
+// {
+// 	// Warning: uses global data
+// 	ControllerData *gd = &GD;
+//
+// 	for (int i=0; i < gd->thermostatServer->args(); i++)
+// 	{
+// 		Serial.print(gd->thermostatServer->argName(i));
+// 		Serial.print(": ");
+// 		Serial.print(gd->thermostatServer->arg(i));
+// 		Serial.println();
+// 	}
+// }
 
-	for (int i=0; i < gd->thermostatServer->args(); i++)
-	{
-		Serial.print(gd->thermostatServer->argName(i));
-		Serial.print(": ");
-		Serial.print(gd->thermostatServer->arg(i));
-		Serial.println();
-	}
-}
-
-// Handles HTTP GET /config.html request
-void UpdateConfig()
+// Handles HTTP GET & POST /config.html requests
+void HandleConfig()
 {
-	dbgPostPrintout();
+	// dbgPostPrintout();
 
 	// Warning: uses global data
 	ControllerData *gd = &GD;
@@ -202,11 +210,13 @@ void UpdateConfig()
 		gd->thermostatServer->sendHeader("Location", String("/config"), true);
 		gd->thermostatServer->send(302, "text/plain", "");
 
+		// Try connecting with new credentials
 		WiFi.disconnect();
+		WiFiManager::handleWiFiConnectivity();
 	}
 
-	// HEATING_UPDATE
-	if (gd->thermostatServer->hasArg("HEATING_UPDATE"))
+	// GENERAL_UPDATE
+	if (gd->thermostatServer->hasArg("GENERAL_UPDATE"))
 	{
 		String param = gd->thermostatServer->arg("T_TEMP");
 		float temperature = param.toFloat();
@@ -214,8 +224,17 @@ void UpdateConfig()
 			config.targetTemp = temperature;
 
 		config.active = gd->thermostatServer->hasArg("ACTIVE");
+		gd->thermostatServer->arg("OTA_URL").toCharArray(
+			config.OTA_URL, OTA_URL_LEN);
 
-		saveConfiguration(&config, sizeof(config));
+		saveConfiguration(&config, sizeof(ConfigurationData));
+	}
+
+	// CHECK_UPDATE_NOW
+	if (gd->thermostatServer->hasArg("CHECK_UPDATE_NOW"))
+	{
+		Serial.println("Checking software updates available.");
+		checkSoftwareUpdates();
 	}
 
 	ESPTemplateProcessor(*gd->thermostatServer).send(
@@ -234,14 +253,14 @@ void checkSoftwareUpdates()
 		versionInfo.close();
 	}
 
-	updateAll(FW_VERSION, spiffsVersion, FW_URL_BASE);
+	updateAll(FW_VERSION, spiffsVersion, config.OTA_URL);
 }
 
 void setup()
 {
 	Serial.begin(115200);
 	Serial.println("Initialisation.");
-	Serial.printf("Thermostat build %d.\n", FW_VERSION);
+	Serial.printf("ShHarbor thermostat build %d.\n", FW_VERSION);
 
 	Serial.println("Configuration loading.");
 	loadConfiguration(&config, sizeof(ConfigurationData));
@@ -249,22 +268,36 @@ void setup()
 	// Warning: uses global data
 	ControllerData *gd = &GD;
 
-	gd->thermostatServer = new ESP8266WebServer(WEB_SERVER_PORT);
+	// Initialise DS1820 temperature sensor
 	gd->temperatureSensor = new TemperatureSensor(ONE_WIRE_PIN);
-	gd->timer = new Timer();
-	gd->mdns = new MDNSResponder();
+	// pinMode(ONE_WIRE_PIN, INPUT_PULLUP);
+	// delay(500);
+	// gd->temperatureSensor->getAddress(0, gd->sensorAddress);
 
-	makeSureWiFiConnected(&config, gd->mdns);
+	gd->thermostatServer = new ESP8266WebServer(WEB_SERVER_PORT);
+	gd->timer = new Timer();
+
+	// Initialise WiFi entity that will handle connectivity. We don't
+	// care of WiFi anymore, all handled inside it
+	WiFiManager::init(&config);
 
 	if (SPIFFS.begin())
 		Serial.println("SPIFFS mount succesfull.");
 	else
 		Serial.println("SPIFFS mount failed.");
 
-	gd->thermostatServer->on("/Status", HTTPMethod::HTTP_GET, HandleHTTPGetStatus);
+	gd->thermostatServer->on("/status", HTTPMethod::HTTP_GET, HandleHTTPGetStatus);
 	gd->thermostatServer->on("/TargetTemperature", HTTPMethod::HTTP_PUT, HandleHTTPTargetTemperature);
 	gd->thermostatServer->on("/Active", HTTPMethod::HTTP_PUT, HandleHTTPActive);
-	gd->thermostatServer->on("/config", UpdateConfig);
+	gd->thermostatServer->on("/config", HandleConfig);
+
+	// captive pages
+	gd->thermostatServer->on("", HandleConfig);
+	gd->thermostatServer->on("/", HandleConfig);
+
+	// css served from SPIFFS
+	gd->thermostatServer->serveStatic(
+		"/bootstrap.min.css", SPIFFS, "/bootstrap.min.css");
 
 	gd->thermostatServer->begin();
 	Serial.println("HTTP server started.");
@@ -281,7 +314,7 @@ void loop()
 {
 	ControllerData *gd = &GD;
 
-	makeSureWiFiConnected(&config, gd->mdns);
 	gd->thermostatServer->handleClient();
 	gd->timer->update();
+	WiFiManager::update();
 }

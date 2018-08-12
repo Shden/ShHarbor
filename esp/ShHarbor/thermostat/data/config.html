@@ -3,7 +3,7 @@
 	<title>Thermostat configuration</title>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+	<link rel="stylesheet" href="bootstrap.min.css">
 </head>
 <body>
 	<div class="row justify-content-md-center">
@@ -26,23 +26,32 @@
 					<label for="mDNS">mDNS Name</label>
 					<input type="text" class="form-control" name="MDNS" value="%MDNS%" placeholder="mDNS Name">
 				</div>
-				<div class="form-group">
-					<label for="IP">IP address</label>
-					<input type="text" class="form-control" name="IP" value="%IP%" readonly>
-				</div>
-				<div class="form-group">
-					<label for="BUILD">Build</label>
-					<input type="text" class="form-control" name="BUILD" value="%BUILD%" readonly>
-				</div>
 				<button type="submit" name="NETWORK_UPDATE" class="btn btn-danger">Update network configuration and reconnect</button>
 			</form>
 			<br>
-			<h1>Heating setup</h1>
+			<h1>Device Information</h1>
+			<hr>
+			<div class="form-row">
+				<div class="form-group col-md-6">
+					<label for="IP">IP address</label>
+					<input type="text" class="form-control" name="IP" value="%IP%" readonly>
+				</div>
+				<div class="form-group col-md-6">
+					<label for="BUILD">Build</label>
+					<input type="text" class="form-control" name="BUILD" value="%BUILD%" readonly>
+				</div>
+				<div class="form-group col-md-6">
+					<label for="DS1820ID">DS1820 ID</label>
+					<input type="text" class="form-control" name="DS1820ID" value="%DS1820ID%" readonly>
+				</div>
+			</div>
+			<br>
+			<h1>General settings</h1>
 			<hr>
 			<form method="POST">
 				<div class="form-group">
 					<label for="temperature">Target temperature, &deg;C</label>
-					<input type="text" class="form-control" name="T_TEMP" value="%T_TEMP%" placeholder="Target temperature">
+					<input type="number" class="form-control" name="T_TEMP" value="%T_TEMP%" placeholder="Target temperature">
 				</div>
 				<div class="form-check">
 					<input class="form-check-input" type="checkbox" %CHECKED% name="ACTIVE">
@@ -51,7 +60,17 @@
 					</label>
 				</div>
 				<br>
-				<button type="submit" name="HEATING_UPDATE" class="btn btn-primary">Update heating configuration</button>
+				<div class="form-group">
+					<label for="OTA_URL">OTA URL</label>
+					<div class="input-group mb-3">
+						<input type="url" class="form-control" name="OTA_URL" value="%OTA_URL%" placeholder="OTA URL">
+						<div class="input-group-append">
+							<button type="submit" name="CHECK_UPDATE_NOW" class="btn btn-outline-secondary" type="button">Check now</button>
+						</div>
+					</div>
+				</div>
+				<br>
+				<button type="submit" name="GENERAL_UPDATE" class="btn btn-primary">Update general settings</button>
 			</form>
 		</div>
 	</div>
