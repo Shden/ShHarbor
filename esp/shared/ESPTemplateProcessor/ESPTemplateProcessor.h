@@ -121,6 +121,7 @@ public:
 				Serial.print(filePath);
 				Serial.println("': Didn't reach the end of the file.");
 			}
+			return false;
 		}
 	}
 
