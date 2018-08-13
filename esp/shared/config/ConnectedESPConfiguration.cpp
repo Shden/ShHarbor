@@ -92,6 +92,16 @@ void loadConfiguration(ConnectedESPConfiguration* configuration, size_t configSi
 		getWiFiConfigurationTTY(configuration);
 	}
 	Serial.printf("SSID to connect: %s\n", configuration->ssid);
+
+	// guard conditions
+	if (strlen(configuration->ssid) > SSID_LEN)
+		configuration->ssid[0] = '\0';
+
+	if (strlen(configuration->secret) > SECRET_LEN)
+		configuration->secret[0] = '\0';
+
+	if (strlen(configuration->MDNSHost) > MDNS_HOST_LEN)
+		configuration->MDNSHost[0] = '\0';
 }
 
 // Save controller configuration to EEPROM

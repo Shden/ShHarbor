@@ -40,13 +40,14 @@
 #define DEFAULT_TARGET_TEMP	28.0
 #define DEFAULT_ACTIVE		0
 #define OTA_URL_LEN		80
+#define ONE_WIRE_ADDR_LEN	16
 
 void checkSoftwareUpdates();
 
 struct ControllerData
 {
 	TemperatureSensor*      temperatureSensor;
-	// char			sensorAddress[20]; ????
+	char			sensorAddress[ONE_WIRE_ADDR_LEN + 1];
 	ESP8266WebServer*       thermostatServer;
 	Timer*                  timer;
 	uint8_t                 heatingOn;
@@ -163,11 +164,15 @@ void HandleHTTPActive()
 // Maps config.html parameters to configuration values.
 String mapConfigParameters(const String& key)
 {
+	// Warning: uses global data.
+	ControllerData *gd = &GD;
+
 	if (key == "SSID") return String(config.ssid); else
 	if (key == "PASS") return String(config.secret); else
 	if (key == "MDNS") return String(config.MDNSHost); else
 	if (key == "IP") return WiFi.localIP().toString(); else
 	if (key == "BUILD") return String(FW_VERSION); else
+	if (key == "DS1820ID") return String(gd->sensorAddress); else
 	if (key == "T_TEMP") return String(config.targetTemp); else
 	if (key == "CHECKED") return config.active ? "checked" : "unchecked"; else
 	if (key == "OTA_URL") return String(config.OTA_URL); else
@@ -270,9 +275,9 @@ void setup()
 
 	// Initialise DS1820 temperature sensor
 	gd->temperatureSensor = new TemperatureSensor(ONE_WIRE_PIN);
-	// pinMode(ONE_WIRE_PIN, INPUT_PULLUP);
-	// delay(500);
-	// gd->temperatureSensor->getAddress(0, gd->sensorAddress);
+	pinMode(ONE_WIRE_PIN, INPUT_PULLUP);
+	delay(500);
+	gd->temperatureSensor->getAddress(0, gd->sensorAddress);
 
 	gd->thermostatServer = new ESP8266WebServer(WEB_SERVER_PORT);
 	gd->timer = new Timer();

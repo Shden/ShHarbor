@@ -50,8 +50,13 @@
 			<hr>
 			<form method="POST">
 				<div class="form-group">
-					<label for="temperature">Target temperature, &deg;C</label>
-					<input type="number" class="form-control" name="T_TEMP" value="%T_TEMP%" placeholder="Target temperature">
+					<label for="temperature">Target temperature</label>
+					<div class="input-group mb-3">
+						<input type="number" step="0.1" class="form-control" name="T_TEMP" value="%T_TEMP%" placeholder="Target temperature">
+						<div class="input-group-append">
+							<span class="input-group-text">&deg;C</span>
+						</div>
+					</div>
 				</div>
 				<div class="form-check">
 					<input class="form-check-input" type="checkbox" %CHECKED% name="ACTIVE">
