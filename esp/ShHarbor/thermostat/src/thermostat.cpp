@@ -174,7 +174,7 @@ String mapConfigParameters(const String& key)
 	if (key == "BUILD") return String(FW_VERSION); else
 	if (key == "DS1820ID") return String(gd->sensorAddress); else
 	if (key == "T_TEMP") return String(config.targetTemp); else
-	if (key == "CHECKED") return config.active ? "checked" : "unchecked"; else
+	if (key == "CHECKED") return config.active ? "checked" : ""; else
 	if (key == "OTA_URL") return String(config.OTA_URL); else
 	return "Mapping value undefined.";
 }

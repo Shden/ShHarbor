@@ -210,8 +210,8 @@ void HandleConfig()
 // Maps control.html parameters to lines status.
 String mapControlParameters(const String& key)
 {
-	if (key == "LINE_A_CHECKED") return (getLine(LINE_A) ? "checked" : "?"); else
-	if (key == "LINE_B_CHECKED") return (getLine(LINE_B) ? "checked" : "?"); else
+	if (key == "LINE_A_CHECKED") return (getLine(LINE_A) ? "checked" : ""); else
+	if (key == "LINE_B_CHECKED") return (getLine(LINE_B) ? "checked" : ""); else
 	return "Mapping value undefined.";
 }
 
