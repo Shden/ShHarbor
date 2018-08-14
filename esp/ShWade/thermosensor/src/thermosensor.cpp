@@ -40,13 +40,18 @@
 #define ONE_WIRE_PIN            5
 #define ENDPOINT_URL_LENGTH	80
 #define OTA_URL_LEN		80
+#define ONE_WIRE_ADDR_LEN	16
+
+#define TEXT_HTML		"text/html"
+#define TEXT_PLAIN		"text/plain"
+#define APPLICATION_JSON	"application/json"
 
 void checkSoftwareUpdates();
 
 struct ControllerData
 {
 	TemperatureSensor*      temperatureSensor;
-	char			sensorAddress[20];
+	char			sensorAddress[ONE_WIRE_ADDR_LEN + 1];
 	ESP8266WebServer*       thermosensorServer;
 	Timer*                  timer;
 } GD;
@@ -118,7 +123,7 @@ void HandleHTTPGetStatus()
 		"\"Build\" : " + String(FW_VERSION) +
 	" }\r\n";
 
-	gd->thermosensorServer->send(200, "application/json", json);
+	gd->thermosensorServer->send(200, APPLICATION_JSON, json);
 }
 
 // Maps config.html parameters to configuration values.
@@ -158,11 +163,18 @@ void HandleConfig()
 
 		// redirect to the same page without arguments
 		gd->thermosensorServer->sendHeader("Location", String("/config"), true);
-		gd->thermosensorServer->send(302, "text/plain", "");
+		gd->thermosensorServer->send(302, TEXT_PLAIN, "");
 
 		// Try connecting with new credentials
 		WiFi.disconnect();
 		WiFiManager::handleWiFiConnectivity();
+	}
+
+	// Reboot
+	if (gd->thermosensorServer->hasArg("REBOOT"))
+	{
+		gd->thermosensorServer->send(200, TEXT_PLAIN, "Restarting...");
+		ESP.restart();
 	}
 
 	// GENERAL_UPDATE

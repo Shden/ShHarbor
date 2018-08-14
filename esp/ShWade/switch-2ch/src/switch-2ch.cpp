@@ -41,6 +41,10 @@
 #define WRONG_LINE_NUMBER	-1
 #define OTA_URL_LEN		80
 
+#define TEXT_HTML		"text/html"
+#define TEXT_PLAIN		"text/plain"
+#define APPLICATION_JSON	"application/json"
+
 void checkSoftwareUpdates();
 
 struct ControllerData
@@ -95,7 +99,7 @@ void HandleHTTPGetStatus()
 			"\"Build\" : " + String(FW_VERSION) +
 		" }\r\n";
 
-	gd->switchServer->send(200, "application/json", json);
+	gd->switchServer->send(200, APPLICATION_JSON, json);
 }
 
 // Handles GET & PUT by lineNo requests
@@ -110,7 +114,7 @@ void HandleLine(int lineNo)
 			{
 				String res = String(getLine(lineNo));
 				gd->switchServer->send(
-					200, "application/json", res);
+					200, APPLICATION_JSON, res);
 			}
 			break;
 
@@ -123,13 +127,13 @@ void HandleLine(int lineNo)
 				{
 					setLine(lineNo, lineState);
 					gd->switchServer->send(
-						200, "application/json",
+						200, APPLICATION_JSON,
 						"Updated to: " +
 						String(getLine(lineNo)) + "\r\n");
 				}
 				else
 				{
-					gd->switchServer->send(401, "text/html",
+					gd->switchServer->send(401, TEXT_PLAIN,
 						"Wrong parameter: " + param + "\r\n");
 				}
 			}
@@ -181,11 +185,18 @@ void HandleConfig()
 
 		// redirect to the same page without arguments
 		gd->switchServer->sendHeader("Location", String("/config"), true);
-		gd->switchServer->send(302, "text/plain", "");
+		gd->switchServer->send(302, TEXT_PLAIN, "");
 
 		// Try connecting with new credentials
 		WiFi.disconnect();
 		WiFiManager::handleWiFiConnectivity();
+	}
+
+	// Reboot
+	if (gd->switchServer->hasArg("REBOOT"))
+	{
+		gd->switchServer->send(200, TEXT_PLAIN, "Restarting...");
+		ESP.restart();
 	}
 
 	// GENERAL_UPDATE

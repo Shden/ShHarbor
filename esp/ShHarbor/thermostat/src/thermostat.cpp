@@ -42,6 +42,10 @@
 #define OTA_URL_LEN		80
 #define ONE_WIRE_ADDR_LEN	16
 
+#define TEXT_HTML		"text/html"
+#define TEXT_PLAIN		"text/plain"
+#define APPLICATION_JSON	"application/json"
+
 void checkSoftwareUpdates();
 
 struct ControllerData
@@ -114,7 +118,7 @@ void HandleHTTPGetStatus()
 	" }\r\n";
 
 	//gd->thermostatServer->sendHeader("Access-Control-Allow-Origin", "*");
-	gd->thermostatServer->send(200, "application/json", json);
+	gd->thermostatServer->send(200, APPLICATION_JSON, json);
 }
 
 // HTTP PUT /TargetTemperature
@@ -129,12 +133,12 @@ void HandleHTTPTargetTemperature()
 	{
 		config.targetTemp = temperature;
 		saveConfiguration(&config, sizeof(ConfigurationData));
-		gd->thermostatServer->send(200, "application/json",
+		gd->thermostatServer->send(200, APPLICATION_JSON,
 			"Updated to: " + param + "\r\n");
 	}
 	else
 	{
-		gd->thermostatServer->send(401, "text/html",
+		gd->thermostatServer->send(401, TEXT_HTML,
 			"Wrong value: " + param + "\r\n");
 	}
 }
@@ -151,12 +155,12 @@ void HandleHTTPActive()
 	{
 		config.active = active;
 		saveConfiguration(&config, sizeof(config));
-		gd->thermostatServer->send(200, "application/json",
+		gd->thermostatServer->send(200, APPLICATION_JSON,
 			"Updated to: " + activeParam + "\r\n");
 	}
 	else
 	{
-		gd->thermostatServer->send(401, "text/html",
+		gd->thermostatServer->send(401, TEXT_HTML,
 			"Wrong value: " + activeParam + "\r\n");
 	}
 }
@@ -213,11 +217,18 @@ void HandleConfig()
 
 		// redirect to the same page without arguments
 		gd->thermostatServer->sendHeader("Location", String("/config"), true);
-		gd->thermostatServer->send(302, "text/plain", "");
+		gd->thermostatServer->send(302, TEXT_PLAIN, "");
 
 		// Try connecting with new credentials
 		WiFi.disconnect();
 		WiFiManager::handleWiFiConnectivity();
+	}
+
+	// Reboot
+	if (gd->thermostatServer->hasArg("REBOOT"))
+	{
+		gd->thermostatServer->send(200, TEXT_PLAIN, "Restarting...");
+		ESP.restart();
 	}
 
 	// GENERAL_UPDATE
