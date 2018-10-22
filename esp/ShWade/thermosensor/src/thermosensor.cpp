@@ -218,6 +218,7 @@ void checkSoftwareUpdates()
 void setup()
 {
 	Serial.begin(115200);
+	//Serial.setDebugOutput(true);
 	Serial.println("Initialisation.");
 	Serial.printf("ShWade temperature sensor build %d.\n", FW_VERSION);
 
@@ -232,14 +233,13 @@ void setup()
 	pinMode(ONE_WIRE_PIN, INPUT_PULLUP);
 	delay(500);
 	gd->temperatureSensor->getAddress(0, gd->sensorAddress);
-	Serial.printf("Sensor address: %s\n", gd->sensorAddress);
+	Serial.printf("Sensor detected: %s\n", gd->sensorAddress);
+
+	// Initialise WiFi entity that will handle connectivity.
+	WiFiManager::init(&config);
 
 	gd->thermosensorServer = new ESP8266WebServer(WEB_SERVER_PORT);
 	gd->timer = new Timer();
-
-	// Initialise WiFi entity that will handle connectivity. We don't
-	// care of WiFi anymore, all handled inside it
-	WiFiManager::init(&config);
 
 	if (SPIFFS.begin())
 		Serial.println("SPIFFS mount succesfull.");

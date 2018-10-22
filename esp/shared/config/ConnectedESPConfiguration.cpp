@@ -39,7 +39,7 @@ void getWiFiConfigurationTTY(ConnectedESPConfiguration* configuration)
 	readString(configuration->secret, SECRET_LEN);
 
 	// Defaults
-	String defaultMDNSHostName = "SH_ESP_" + ESP.getChipId();
+	String defaultMDNSHostName = "SH_ESP_" + String(ESP.getChipId());
 	strncpy(configuration->MDNSHost, defaultMDNSHostName.c_str(), MDNS_HOST_LEN);
 
 	// Initisalised flag

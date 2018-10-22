@@ -290,12 +290,12 @@ void setup()
 	delay(500);
 	gd->temperatureSensor->getAddress(0, gd->sensorAddress);
 
-	gd->thermostatServer = new ESP8266WebServer(WEB_SERVER_PORT);
-	gd->timer = new Timer();
-
 	// Initialise WiFi entity that will handle connectivity. We don't
 	// care of WiFi anymore, all handled inside it
 	WiFiManager::init(&config);
+
+	gd->thermostatServer = new ESP8266WebServer(WEB_SERVER_PORT);
+	gd->timer = new Timer();
 
 	if (SPIFFS.begin())
 		Serial.println("SPIFFS mount succesfull.");

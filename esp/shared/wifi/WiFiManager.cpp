@@ -20,7 +20,7 @@ Module should be in the loop() cycle via update() entry point.
 #include <Timer.h>
 #include <DNSServer.h>
 
-#define MAX_CONNECTION_ATTEMPTS		32
+#define MAX_CONNECTION_ATTEMPTS		200
 #define RECONNECTION_CYCLE		4 * 60 * 1000	// each 4 minutes
 #define BLUE_LED_PIN			2		// HIGH = off, LOW = on.
 #define DNS_PORT			53		// DNS server
