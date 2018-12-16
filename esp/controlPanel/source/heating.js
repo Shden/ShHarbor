@@ -33,7 +33,7 @@ class RoomClimate extends Component { 			// eslint-disable-line no-unused-vars
 	}
 
 	loadData() {
-		fetch(`http://${this.props.address}/Status`, { mode: 'cors'  })
+		fetch(`http://${this.props.address}/status`)
 			.then(responce => responce.json())
 			.then(status => {
 				this.setState(Object.assign({}, status ));
@@ -48,8 +48,12 @@ export default class Heating extends Component {
 		return (
 			<div>
 				<PageHeader>Климат</PageHeader>
-				<RoomClimate name="Cпальня" address="192.168.1.81"/>
 				<RoomClimate name="Теплый пол в ванной" address="192.168.1.80"/>
+				<RoomClimate name="Cпальня" address="192.168.1.81"/>
+				<RoomClimate name="Гостиная" address="192.168.1.82"/>
+				<RoomClimate name="Комната Агаты" address="192.168.1.83"/>
+				<RoomClimate name="Комната Cаши" address="192.168.1.84"/>
+				<RoomClimate name="Кухня" address="192.168.1.85"/>
 			</div>
 		);
 	}
