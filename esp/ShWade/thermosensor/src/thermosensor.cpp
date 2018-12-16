@@ -218,7 +218,10 @@ void checkSoftwareUpdates()
 void setup()
 {
 	Serial.begin(115200);
+
+	// extended wifi debug output
 	//Serial.setDebugOutput(true);
+
 	Serial.println("Initialisation.");
 	Serial.printf("ShWade temperature sensor build %d.\n", FW_VERSION);
 

@@ -117,7 +117,7 @@ void HandleHTTPGetStatus()
 	"\"Build\" : " + String(FW_VERSION) +
 	" }\r\n";
 
-	//gd->thermostatServer->sendHeader("Access-Control-Allow-Origin", "*");
+	gd->thermostatServer->sendHeader("Access-Control-Allow-Origin", "*");
 	gd->thermostatServer->send(200, APPLICATION_JSON, json);
 }
 

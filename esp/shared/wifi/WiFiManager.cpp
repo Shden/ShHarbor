@@ -64,6 +64,15 @@ namespace WiFiManager
 			Serial.println("Disconnected.");
 			WiFi.mode(WIFI_STA);
 			WiFi.begin(config->ssid, config->secret);
+
+			// // --- brod debug
+			// IPAddress my_ip(192,168,1,100);
+			// IPAddress gw(192,168,1,1);
+			// IPAddress subnet(255,255,255,0);
+			//
+			// WiFi.config(my_ip, gw, subnet);
+			// // ---
+
 			Serial.print("Connecting to WiFi: ");
 
 			// Connection loop
