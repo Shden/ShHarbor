@@ -23,9 +23,9 @@
 #include <ESP8266mDNS.h>
 #include <Timer.h>
 #include <FS.h>
-#include "OTA.h"
-#include "config.h"
-#include "wifi.h"
+#include <OTA.h>
+#include <ConnectedESPConfiguration.h>
+#include <WiFiManager.h>
 
 #define WEB_SERVER_PORT         80
 #define CHECK_SW_UPDATES_EVERY	(60000L*5)	// every 5 min
@@ -33,6 +33,10 @@
 #define LINKED_SWITCH_ADDR_LEN	80
 #define SW_LINES		3
 #define CHANGE_LINE_METHOD	"/ChangeLine"
+
+#define TEXT_HTML		"text/html"
+#define TEXT_PLAIN		"text/plain"
+#define APPLICATION_JSON	"application/json"
 
 // ESP-12 pins:
 // inputs: U6, U7, U8
@@ -59,7 +63,6 @@ void checkSoftwareUpdates();
 struct ControllerData
 {
 	ESP8266WebServer*       switchServer;
-	MDNSResponder*          mdns;
 	Timer*                  timer;
 	int			remoteControlBits[SW_LINES];	// remote control bits by channels
 	int			switchPins[SW_LINES];		// switch pins by channels
@@ -96,7 +99,7 @@ void HandleHTTPGetStatus()
 
 	json += String("\"Build\" : ") + String(FW_VERSION) + " }\n\r";
 
-	gd->switchServer->send(200, "application/json", json);
+	gd->switchServer->send(200, APPLICATION_JSON, json);
 }
 
 // HTTP GET /ChangeLine
@@ -122,18 +125,18 @@ void HandleHTTPChangeLine()
 				gd->remoteControlBits[lineNum] =
 					!gd->remoteControlBits[lineNum];
 
-			gd->switchServer->send(200, "application/json",
+			gd->switchServer->send(200, APPLICATION_JSON,
 				"Updated to: " + newState + "\r\n");
 		}
 		else
 		{
-			gd->switchServer->send(401, "text/html",
+			gd->switchServer->send(401, TEXT_HTML,
 				"Wrong line state: " + newState + "\r\n");
 		}
 	}
 	else
 	{
-		gd->switchServer->send(401, "text/html",
+		gd->switchServer->send(401, TEXT_HTML,
 			"Wrong line number: " + line + "\r\n");
 	}
 }
@@ -161,13 +164,13 @@ void HandleHTTPSetLinkedSwitch()
 		config.linkedSwitchLine[lineNum] = linkedLineNum;
 
 		saveConfiguration(&config, sizeof(ConfigurationData));
-		gd->switchServer->send(200, "application/json",
+		gd->switchServer->send(200, APPLICATION_JSON,
 			"Updated to: " + linkedAddress +
 			" and line: " + linkedLine + "\r\n");
 	}
 	else
 	{
-		gd->switchServer->send(401, "text/html",
+		gd->switchServer->send(401, TEXT_HTML,
 			"Wrong line number: " + line + "\r\n");
 	}
 }
@@ -178,13 +181,13 @@ void HandleHTTPCheckSoftwareUpdates()
 	// Warning: uses global data
 	ControllerData *gd = &GD;
 
-	gd->switchServer->send(200, "text/html",
+	gd->switchServer->send(200, TEXT_HTML,
 		"Checking new firmware availability...\r\n");
 	checkSoftwareUpdates();
 
 	// if there was new version we wouldn't get here, so
 	// TODO: this never works as the connection seems to be closed already.
-	gd->switchServer->send(200, "text/html",
+	gd->switchServer->send(200, TEXT_HTML,
 		"No update available now.\r\n");
 }
 
@@ -294,14 +297,14 @@ void handleSPIFFSFileRead()
 		gd->switchServer->streamFile(spiffsFile, contentType);
 		spiffsFile.close();
 	}
-	gd->switchServer->send(404, "text/plain", "File not found.");
+	gd->switchServer->send(404, TEXT_PLAIN, "File not found.");
 }
 
 void setup()
 {
 	Serial.begin(115200);
 	Serial.println("Initialisation.");
-	Serial.printf("Switch controller build %d.\n", FW_VERSION);
+	Serial.printf("ShHarbor switch controller build %d.\n", FW_VERSION);
 
 	Serial.println("Configuration loading.");
 	loadConfiguration(&config, sizeof(ConfigurationData));
@@ -309,11 +312,12 @@ void setup()
 	// Warning: uses global data
 	ControllerData *gd = &GD;
 
+	// Initialise WiFi entity that will handle connectivity. We don't
+	// care of WiFi anymore, all handled inside it
+	WiFiManager::init(&config);
+
 	gd->switchServer = new ESP8266WebServer(WEB_SERVER_PORT);
 	gd->timer = new Timer();
-	gd->mdns = new MDNSResponder();
-
-	makeSureWiFiConnected(&config, gd->mdns);
 
 	if (SPIFFS.begin())
 		Serial.println("SPIFFS mount succesfull.");
@@ -350,7 +354,7 @@ void loop()
 {
 	ControllerData *gd = &GD;
 
-	makeSureWiFiConnected(&config, gd->mdns);
 	gd->switchServer->handleClient();
 	gd->timer->update();
+	WiFiManager::update();
 }
