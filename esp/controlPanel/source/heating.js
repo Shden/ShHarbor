@@ -54,7 +54,13 @@ export default class Heating extends Component {
 				<RoomClimate name="Комната Агаты" address="192.168.1.83"/>
 				<RoomClimate name="Комната Cаши" address="192.168.1.84"/>
 				<RoomClimate name="Кухня" address="192.168.1.85"/>
+				<br/>
+				<Button bsStyle="primary" onClick={ () => this.reload() }>Обновить</Button>
 			</div>
 		);
+	}
+
+	reload() {
+		window.location.reload();
 	}
 }
