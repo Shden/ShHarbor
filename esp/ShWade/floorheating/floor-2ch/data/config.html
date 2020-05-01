@@ -1,0 +1,126 @@
+<html>
+<head>
+	<title>Thermostat configuration</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<link rel="stylesheet" href="bootstrap.min.css">
+</head>
+<body>
+	<div class="container">
+		<div class="row justify-content-md-center">
+			<div class="col-sm-7">
+				<br>
+				<h1>Network setup</h1>
+				<hr>
+				<form method="POST">
+					<div class="form-row">
+						<div class="form-group col-sm-6">
+							<label for="ssid">SSID</label>
+							<input type="ssid" class="form-control" name="SSID" value="%SSID%" placeholder="SSID">
+						</div>
+						<div class="form-group col-sm-6">
+							<label for="inputPassword">Password</label>
+							<input type="password" class="form-control" name="PASS" value="%PASS%" placeholder="Password">
+						</div>
+					</div>
+					<div class="form-row">
+						<div class="form-group col-sm-6">
+							<label for="mDNS">mDNS Name</label>
+							<input type="text" class="form-control" name="MDNS" value="%MDNS%" placeholder="mDNS Name">
+						</div>
+						<div class="form-group col-sm-6">
+							<label>Device IP:</label>
+							<input type="text" class="form-control" name="IP" value="%IP%" placeholder="Device IP">
+						</div>
+					</div>
+					<button type="submit" name="NETWORK_UPDATE" class="btn btn-warning">Update network and reconnect</button>
+					<button type="submit" name="REBOOT" class="btn btn-danger">Reboot</button>
+				</form>
+				<br>
+				<h1>Device Information</h1>
+				<hr>
+				<div class="form-row">
+					<div class="form-group col-sm-6">
+						<label for="IP">IP address</label>
+						<input type="text" class="form-control" name="IP" value="%IP%" readonly>
+					</div>
+					<div class="form-group col-sm-6">
+						<label for="BUILD">Build</label>
+						<input type="text" class="form-control" name="BUILD" value="%BUILD%" readonly>
+					</div>
+					<div class="form-group col-sm-12">
+						<label for="DS1820IDS">DS1820 connected</label>
+						<textarea textarea class="form-control" name="DS1820IDS" rows="3" readonly>%DS1820IDS%</textarea>
+					</div>
+					<div class="form-group col-sm-6">
+						<label for="VERSION">Firmware version</label>
+						<input type="text" class="form-control" name="VERSION" value="%VERSION%" readonly>
+					</div>
+				</div>
+				<br>
+				<h1>General settings</h1>
+				<hr>
+				<form method="POST">
+					<div class="form-group">
+						<label for="T_TEMP">Target temperature</label>
+						<div class="input-group mb-3">
+							<input type="number" step="0.1" class="form-control" name="T_TEMP" value="%T_TEMP%" placeholder="Target temperature">
+							<div class="input-group-append">
+								<span class="input-group-text">&deg;C</span>
+							</div>
+						</div>
+					</div>
+					<div class="form-row">
+						<div class="form-group col-sm-8">
+							<label for="DS1820_CH1_ADDR">Sensor channel 1 address</label>
+							<input type="text" class="form-control" name="DS1820_CH1_ADDR" value="%DS1820_CH1_ADDR%" placeholder="OneWire address">
+						</div>
+						<div class="form-group col-sm-4">
+							<label for="CH1_POWER">Floor channel 1 power</label>
+							<div class="input-group sm-6">
+								<input type="number" class="form-control" name="CH1_POWER" value="%CH1_POWER%" placeholder="Power consumption">
+								<div class="input-group-append">
+									<span class="input-group-text">Watt</span>
+								</div>	
+							</div>					
+						</div>
+					</div>
+					<div class="form-row">
+						<div class="form-group col-sm-8">
+							<label for="DS1820_CH2_ADDR">Sensor channel 2 address</label>
+							<input type="text" class="form-control" name="DS1820_CH2_ADDR" value="%DS1820_CH2_ADDR%" placeholder="OneWire address">
+						</div>
+						<div class="form-group col-sm-4">
+							<label for="CH2_POWER">Floor channel 2 power</label>
+							<div class="input-group sm-6">
+								<input type="number" class="form-control" name="CH2_POWER" value="%CH2_POWER%" placeholder="Power consumption">
+								<div class="input-group-append">
+									<span class="input-group-text">Watt</span>
+								</div>	
+							</div>					
+						</div>
+					</div>
+					<div class="form-check">
+						<input class="form-check-input" type="checkbox" %CHECKED% name="ACTIVE">
+						<label class="form-check-label" for="active">
+							Thermostat is active
+						</label>
+					</div>
+					<br>
+					<div class="form-group">
+						<label for="OTA_URL">OTA URL</label>
+						<div class="input-group mb-3">
+							<input type="url" class="form-control" name="OTA_URL" value="%OTA_URL%" placeholder="OTA URL">
+							<div class="input-group-append">
+								<button type="submit" name="CHECK_UPDATE_NOW" class="btn btn-outline-secondary" type="button">Check now</button>
+							</div>
+						</div>
+					</div>
+					<br>
+					<button type="submit" name="GENERAL_UPDATE" class="btn btn-primary">Update general settings</button>
+				</form>
+			</div>
+		</div>
+	</div>
+</body>
+</html>
