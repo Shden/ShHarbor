@@ -10,14 +10,27 @@ public:
 	// Constructor
 	TemperatureSensor(uint8_t pin);
 
-	// To get the latest temperature update from the sensor by index
-	float getTemperature(uint8_t sensorIndex);
+	// Get the latest temperature from sensor by index
+	float getTemperature(int sensorIndex);
 
-	// Get 1wire address by index
-	void getAddress(uint8_t sensorIndex, char* address);
+	// Get the latest temperature from sensor by address
+	float getTemperature(DeviceAddress address);
+
+	// Get 1wire char* address by index
+	void getAddress(int sensorIndex, char* address);
+
+	// Get 1wire device addres by index
+	bool getAddress(int sensorIndex, DeviceAddress address);
+
+	// Convert DeviceAddress to character string
+	void deviceAddresToString(DeviceAddress oneWireAddress, char* address);
+
+	// Convert character string to DeviceAddress
+	void stringToDeviceAddress(char* address, DeviceAddress oneWireAddress);
 private:
 	OneWire *ow;
 	DallasTemperature *sensors;
+	int char2int(char input);
 };
 
 #endif

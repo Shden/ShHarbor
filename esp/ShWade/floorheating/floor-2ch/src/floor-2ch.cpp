@@ -52,6 +52,7 @@
 #define CHECK_HEATING_EVERY     (15000L)        // every 15 sec
 #define CHECK_SW_UPDATES_EVERY	(60000L*5)	// every 5 min
 #define CHECK_1WIRE_SENSORS	(30000L)	// every 30 sec
+#define POST_TEMPERATURE_EVERY	(60000L)	// every minute
 #define DEFAULT_TARGET_TEMP	28.0
 #define DEFAULT_ACTIVE		0
 #define OTA_URL_LEN		80
@@ -65,11 +66,11 @@
 typedef char DeviceAddressChar[ONE_WIRE_ADDR_LEN + 1];
 
 void checkSoftwareUpdates();
+float getTemperature(DeviceAddress);
 
 struct ControllerData
 {
 	TemperatureSensor*      temperatureSensors;
-	//DeviceAddressChar	sensorAddress[2];
 	ESP8266WebServer*       thermostatServer;
 	Timer*                  timer;
 } GD;
@@ -119,6 +120,47 @@ float getPowerConsumption()
 		httpRequest.end();
 	}
 	return -1;
+}
+
+// Post current temperature data to remote API
+void postTemperature()
+{
+	// Warning: uses global data.
+	ControllerData *gd = &GD;
+
+	if (WL_CONNECTED == WiFi.status())
+	{
+		HTTPClient httpRequest;
+		httpRequest.begin("http://192.168.1.162:81/API/1.1/climate/data/temperature");
+		httpRequest.addHeader("Content-Type", APPLICATION_JSON);
+
+		// Convert 1-wire addresses to char strings
+		DeviceAddress sensor1Address, sensor2Address;
+
+		memset(sensor1Address, 0, sizeof(DeviceAddress));
+		memset(sensor2Address, 0, sizeof(DeviceAddress));
+
+		gd->temperatureSensors->getAddress(0, sensor1Address);
+		gd->temperatureSensors->getAddress(1, sensor2Address);
+
+		DeviceAddressChar sensor1CharAddress, sensor2CharAddress;
+
+		gd->temperatureSensors->deviceAddresToString(sensor1Address, sensor1CharAddress);
+		gd->temperatureSensors->deviceAddresToString(sensor2Address, sensor2CharAddress);
+
+		// Prepare payload by the template: [{ "temperature" : 21.5, "sensorId": "28FF72BF47160342" }]
+		String temperaturePayload =
+			String("[") +
+			"{ \"temperature\" : " + String(getTemperature(config.heatingChannel[0].sensorAddress), 2) +
+			", \"sensorId\" : \"" + String(sensor1CharAddress) + "\" }" +
+			", " +
+			"{ \"temperature\" : " + String(getTemperature(config.heatingChannel[1].sensorAddress), 2) +
+			", \"sensorId\" : \"" + String(sensor2CharAddress) + "\" }" +
+			"]";
+		
+		// Just fire and forget
+		httpRequest.POST(temperaturePayload);
+	}
 }
 
 // Go to sensor by address and get current temperature
@@ -499,6 +541,7 @@ void setup()
 	gd->timer->every(UPDATE_TEMP_EVERY, temperatureUpdate);
 	gd->timer->every(CHECK_HEATING_EVERY, controlHeating);
 	gd->timer->every(CHECK_SW_UPDATES_EVERY, checkSoftwareUpdates);
+	gd->timer->every(POST_TEMPERATURE_EVERY, postTemperature);
 
 	pinMode(AC_CONTROL_PIN_1, OUTPUT);
 	pinMode(AC_CONTROL_PIN_2, OUTPUT);

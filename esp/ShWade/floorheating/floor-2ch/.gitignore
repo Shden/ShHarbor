@@ -3,6 +3,6 @@
 .gcc-flags.json
 .piolibdeps
 data/build
-data/index.html
 .pio
 .vscode
+lib

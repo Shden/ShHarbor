@@ -19,9 +19,8 @@
  *
  *	By denis.afanassiev@gmail.com
  *
- *	API:
- *	curl 192.168.1.15/Status
- 
+ *	REST API:
+ *	curl <IP address>/status
  */
 
 #include <Arduino.h>
@@ -44,17 +43,19 @@
 #define UPDATE_TEMP_EVERY       (5000L)         // every 5 sec
 #define CHECK_HEATING_EVERY     (15000L)        // every 15 sec
 #define CHECK_SW_UPDATES_EVERY	(60000L*5)	// every 5 min
+#define POST_TEMPERATURE_EVERY	(60000L*1)	// every minute
 #define DEFAULT_TARGET_TEMP	28.0
 #define DEFAULT_ACTIVE		0
 #define OTA_URL_LEN		80
 #define ONE_WIRE_ADDR_LEN	16
-#define MAX_ALLOWED_POWER	17000		// 17 kW total
+#define MAX_ALLOWED_POWER	16500		// 17 kW total
 
 #define TEXT_HTML		"text/html"
 #define TEXT_PLAIN		"text/plain"
 #define APPLICATION_JSON	"application/json"
 
 void checkSoftwareUpdates();
+float getTemperature();
 
 struct ControllerData
 {
@@ -81,7 +82,7 @@ struct ConfigurationData : ConnectedESPConfiguration
 // Check current power consumption via API
 float getPowerConsumption()
 {
-	if (WiFi.status() == WL_CONNECTED)
+	if (WL_CONNECTED == WiFi.status())
 	{
 		HTTPClient httpRequest;
 		httpRequest.begin("http://192.168.1.162:81/API/1.1/consumption/electricity/GetPowerMeterData");
@@ -100,6 +101,31 @@ float getPowerConsumption()
 		httpRequest.end();
 	}
 	return -1;
+}
+
+// Post current temperature data to remote API
+void postTemperature()
+{
+	// Warning: uses global data.
+	ControllerData *gd = &GD;
+
+	if (WL_CONNECTED == WiFi.status())
+	{
+		HTTPClient httpRequest;
+		httpRequest.begin("http://192.168.1.162:81/API/1.1/climate/data/temperature");
+		httpRequest.addHeader("Content-Type", APPLICATION_JSON);
+
+		// Prepare payload by the template: [{ "temperature" : 21.5, "sensorId": "28FF72BF47160342" }]
+		String temperaturePayload =
+			String("[{ ") +
+			"\"temperature\" : " + String(getTemperature(), 2) +
+			", " +
+			"\"sensorId\" : \"" + String(gd->sensorAddress) + "\"" +
+			" }]";
+		
+		// Just fire and forget
+		httpRequest.POST(temperaturePayload);
+	}
 }
 
 // Go to sensor and get current temperature.
@@ -389,6 +415,7 @@ void setup()
 	gd->timer->every(UPDATE_TEMP_EVERY, temperatureUpdate);
 	gd->timer->every(CHECK_HEATING_EVERY, controlHeating);
 	gd->timer->every(CHECK_SW_UPDATES_EVERY, checkSoftwareUpdates);
+	gd->timer->every(POST_TEMPERATURE_EVERY, postTemperature);
 
 	pinMode(AC_CONTROL_PIN, OUTPUT);
 }
