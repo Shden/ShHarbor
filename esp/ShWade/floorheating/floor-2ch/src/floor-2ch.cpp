@@ -39,6 +39,7 @@
 
 #include <WiFiClientSecure.h>
 #include <time.h>
+#include <PubSubClient.h>
 #include <MQTT.h>
 #include "secrets.h"
 
@@ -46,9 +47,11 @@ const int MQTT_PORT = 8883;
 const char MQTT_SUB_TOPIC[] = "$aws/things/" THINGNAME "/shadow/update";
 const char MQTT_PUB_TOPIC[] = "$aws/things/" THINGNAME "/shadow/update";
 
+#define MQTT_BUFFER_SIZE	2048
+
 uint8_t DST = 0;
 WiFiClientSecure net;
-MQTTClient client;
+PubSubClient client(net);
 
 BearSSL::X509List cert(cacert);
 BearSSL::X509List client_crt(client_cert);
@@ -137,80 +140,94 @@ void NTPConnect(void)
 	Serial.print(asctime(&timeinfo));
 }
 
+// IoT thing shadow messages recever
+void messageReceived(char *topic, byte *payload, unsigned int length)
+{
+	Serial.printf("Received [%s]\n", topic);
+	for (int i = 0; i < length; i++)
+		Serial.print((char)payload[i]);
+	Serial.println();
+
+	DynamicJsonDocument jsonMessage(4096);
+	DeserializationError error = deserializeJson(jsonMessage, (char*)payload);
+	
+	// Test if parsing succeeded
+	if (error)
+	{
+		Serial.print("deserializeJson() failed: ");
+		Serial.println(error.c_str());
+		return;
+	}
+
+	JsonVariant houseMode = 
+		jsonMessage["state"]["reported"]["config"]["mode"];
+	JsonVariant house1FloorTemp = 
+		jsonMessage["state"]["reported"]["config"]["heating"]["house1FloorTemp"];
+
+	if (houseMode && house1FloorTemp)
+	{
+		float temp = house1FloorTemp.as<float>();
+		int active = (houseMode.as<String>() == "presence") ? 1 : 0;
+
+		Serial.println("Configuration info received:");
+		Serial.printf("Thermostat is active: %d\n", active);
+		Serial.printf("Thermostat setpoint: %f\n", temp);
+
+		if (config.targetTemp != temp || config.active != active)
+		{
+			Serial.println("Configuration will be updated...");
+			config.targetTemp = temp;
+			config.active = active;
+			saveConfiguration(&config, sizeof(ConfigurationData));
+			Serial.println("Configuration updated.");
+		}
+	}
+}
+
 // MQTT errors printing
-void lwMQTTErr(lwmqtt_err_t reason)
+void pubSubErr(int8_t MQTTErr)
 {
-	if (reason == lwmqtt_err_t::LWMQTT_SUCCESS)
-		Serial.print("Success");
-	else if (reason == lwmqtt_err_t::LWMQTT_BUFFER_TOO_SHORT)
-		Serial.print("Buffer too short");
-	else if (reason == lwmqtt_err_t::LWMQTT_VARNUM_OVERFLOW)
-		Serial.print("Varnum overflow");
-	else if (reason == lwmqtt_err_t::LWMQTT_NETWORK_FAILED_CONNECT)
-		Serial.print("Network failed connect");
-	else if (reason == lwmqtt_err_t::LWMQTT_NETWORK_TIMEOUT)
-		Serial.print("Network timeout");
-	else if (reason == lwmqtt_err_t::LWMQTT_NETWORK_FAILED_READ)
-		Serial.print("Network failed read");
-	else if (reason == lwmqtt_err_t::LWMQTT_NETWORK_FAILED_WRITE)
-		Serial.print("Network failed write");
-	else if (reason == lwmqtt_err_t::LWMQTT_REMAINING_LENGTH_OVERFLOW)
-		Serial.print("Remaining length overflow");
-	else if (reason == lwmqtt_err_t::LWMQTT_REMAINING_LENGTH_MISMATCH)
-		Serial.print("Remaining length mismatch");
-	else if (reason == lwmqtt_err_t::LWMQTT_MISSING_OR_WRONG_PACKET)
-		Serial.print("Missing or wrong packet");
-	else if (reason == lwmqtt_err_t::LWMQTT_CONNECTION_DENIED)
-		Serial.print("Connection denied");
-	else if (reason == lwmqtt_err_t::LWMQTT_FAILED_SUBSCRIPTION)
-		Serial.print("Failed subscription");
-	else if (reason == lwmqtt_err_t::LWMQTT_SUBACK_ARRAY_OVERFLOW)
-		Serial.print("Suback array overflow");
-	else if (reason == lwmqtt_err_t::LWMQTT_PONG_TIMEOUT)
-		Serial.print("Pong timeout");
-}
-
-void lwMQTTErrConnection(lwmqtt_return_code_t reason)
-{
-	if (reason == lwmqtt_return_code_t::LWMQTT_CONNECTION_ACCEPTED)
-		Serial.print("Connection Accepted");
-	else if (reason == lwmqtt_return_code_t::LWMQTT_UNACCEPTABLE_PROTOCOL)
-		Serial.print("Unacceptable Protocol");
-	else if (reason == lwmqtt_return_code_t::LWMQTT_IDENTIFIER_REJECTED)
-		Serial.print("Identifier Rejected");
-	else if (reason == lwmqtt_return_code_t::LWMQTT_SERVER_UNAVAILABLE)
-		Serial.print("Server Unavailable");
-	else if (reason == lwmqtt_return_code_t::LWMQTT_BAD_USERNAME_OR_PASSWORD)
-		Serial.print("Bad UserName/Password");
-	else if (reason == lwmqtt_return_code_t::LWMQTT_NOT_AUTHORIZED)
-		Serial.print("Not Authorized");
-	else if (reason == lwmqtt_return_code_t::LWMQTT_UNKNOWN_RETURN_CODE)
-		Serial.print("Unknown Return Code");
-}
-
-// IoT thing message receved handler
-void messageReceived(String &topic, String &payload)
-{
-	Serial.println("Recieved [" + topic + "]: " + payload);
+	if (MQTTErr == MQTT_CONNECTION_TIMEOUT)
+		Serial.print("Connection timeout");
+	else if (MQTTErr == MQTT_CONNECTION_LOST)
+		Serial.print("Connection lost");
+	else if (MQTTErr == MQTT_CONNECT_FAILED)
+		Serial.print("Connect failed");
+	else if (MQTTErr == MQTT_DISCONNECTED)
+		Serial.print("Disconnected");
+	else if (MQTTErr == MQTT_CONNECTED)
+		Serial.print("Connected");
+	else if (MQTTErr == MQTT_CONNECT_BAD_PROTOCOL)
+		Serial.print("Connect bad protocol");
+	else if (MQTTErr == MQTT_CONNECT_BAD_CLIENT_ID)
+		Serial.print("Connect bad Client-ID");
+	else if (MQTTErr == MQTT_CONNECT_UNAVAILABLE)
+		Serial.print("Connect unavailable");
+	else if (MQTTErr == MQTT_CONNECT_BAD_CREDENTIALS)
+		Serial.print("Connect bad credentials");
+	else if (MQTTErr == MQTT_CONNECT_UNAUTHORIZED)
+		Serial.print("Connect unauthorized");
 }
 
 // Connect to AWS MQTT
 void connectToMqtt(bool nonBlocking = false)
 {
-	Serial.print("MQTT connecting ");
+	Serial.print("MQTT connecting... ");
 	while (!client.connected())
 	{
 		// MDNS host name is used as MQTT client name(?)
 		if (client.connect(config.MDNSHost))
 		{
-			Serial.println("connected!");
+			Serial.println("done!");
 			if (!client.subscribe(MQTT_SUB_TOPIC))
-				lwMQTTErr(client.lastError());
+				// lwMQTTErr(client.lastError());
+				pubSubErr(client.state());
 		}
 		else
 		{
 			Serial.print("failed, reason -> ");
-			lwMQTTErrConnection(client.returnCode());
+			pubSubErr(client.state());
+			// lwMQTTErrConnection(client.returnCode());
 			if (!nonBlocking)
 			{
 				Serial.println(" < try again in 5 seconds");
@@ -238,14 +255,9 @@ float getPowerConsumption()
 
 		if (httpCode > 0)
 		{
-			StaticJsonDocument<2048> jsonResponce;
-			// Serial.print("GET responce: ");
-			// Serial.println(httpRequest.getString().c_str());
+			DynamicJsonDocument jsonResponce(2048);
 			deserializeJson(jsonResponce, httpRequest.getString());
-
 			float power = jsonResponce["P"]["sum"];
-			// Serial.print("getPowerConsumption: ");
-			// Serial.println(power);
 			return power;
 		}
 		else
@@ -271,8 +283,9 @@ void postTemperature()
 			"\"hall_floor_2\": " + String(getTemperature(config.heatingChannel[1].sensorAddress), 2) +
 			"}}}}";
 			
-		if (!client.publish(MQTT_PUB_TOPIC, temperaturePayload, false, 0))
-			lwMQTTErr(client.lastError());		
+		if (!client.publish(MQTT_PUB_TOPIC, temperaturePayload.c_str(), false))
+			// lwMQTTErr(client.lastError());
+			pubSubErr(client.state());		
 	}
 }
 
@@ -656,9 +669,10 @@ void setup()
 	net.setTrustAnchors(&cert);
 	net.setClientRSACert(&client_crt, &key);
 
-	// (?) client.setKeepAlive(30000);
-	client.begin(MQTT_HOST, MQTT_PORT, net);
-	client.onMessage(messageReceived);
+	// client.setKeepAlive(30000);
+	client.setServer(MQTT_HOST, MQTT_PORT);
+	client.setBufferSize(MQTT_BUFFER_SIZE);
+	client.setCallback(messageReceived);
 	connectToMqtt();
 
 	// Set up regulars
@@ -681,8 +695,11 @@ void loop()
 	gd->timer->update();
 	WiFiManager::update();
 
-	now = time(nullptr);
-	client.loop();
-	if (!client.connected())
-		connectToMqtt(true);
+	if (WL_CONNECTED == WiFi.status())
+	{
+		client.loop();
+
+		if (!client.connected())
+			connectToMqtt(true);
+	}
 }
