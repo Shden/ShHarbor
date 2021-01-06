@@ -37,6 +37,23 @@
 #include <ArduinoJson.h>
 #include <ESP8266HttpClient.h>
 
+#include <WiFiClientSecure.h>
+#include <time.h>
+#include <MQTT.h>
+#include "secrets.h"
+
+const int MQTT_PORT = 8883;
+const char MQTT_SUB_TOPIC[] = "$aws/things/" THINGNAME "/shadow/update";
+const char MQTT_PUB_TOPIC[] = "$aws/things/" THINGNAME "/shadow/update";
+
+uint8_t DST = 0;
+WiFiClientSecure net;
+MQTTClient client;
+
+BearSSL::X509List cert(cacert);
+BearSSL::X509List client_crt(client_cert);
+BearSSL::PrivateKey key(privkey);
+
 #define ONE_WIRE_PIN            5
 
 // outputs: U3, U4, U5
@@ -77,7 +94,7 @@ struct ControllerData
 
 /* heating channel, includes:
  * 	- DS1820 sensor address
- * 	- segment power
+ * 	- segment's power consumption
  */
 struct HeatingChannel
 {
@@ -98,68 +115,164 @@ struct ConfigurationData : ConnectedESPConfiguration
 	HeatingChannel		heatingChannel[2];
 } config;
 
+unsigned long lastMillis = 0;
+time_t now;
+time_t nowish = 1510592825;
+
+void NTPConnect(void)
+{
+	Serial.print("Setting time using SNTP");
+	configTime(TIME_ZONE * 3600, DST * 3600, "pool.ntp.org", "time.nist.gov");
+	now = time(nullptr);
+	while (now < nowish)
+	{
+		delay(500);
+		Serial.print(".");
+		now = time(nullptr);
+	}
+	Serial.println("done!");
+	struct tm timeinfo;
+	gmtime_r(&now, &timeinfo);
+	Serial.print("Current time: ");
+	Serial.print(asctime(&timeinfo));
+}
+
+// MQTT errors printing
+void lwMQTTErr(lwmqtt_err_t reason)
+{
+	if (reason == lwmqtt_err_t::LWMQTT_SUCCESS)
+		Serial.print("Success");
+	else if (reason == lwmqtt_err_t::LWMQTT_BUFFER_TOO_SHORT)
+		Serial.print("Buffer too short");
+	else if (reason == lwmqtt_err_t::LWMQTT_VARNUM_OVERFLOW)
+		Serial.print("Varnum overflow");
+	else if (reason == lwmqtt_err_t::LWMQTT_NETWORK_FAILED_CONNECT)
+		Serial.print("Network failed connect");
+	else if (reason == lwmqtt_err_t::LWMQTT_NETWORK_TIMEOUT)
+		Serial.print("Network timeout");
+	else if (reason == lwmqtt_err_t::LWMQTT_NETWORK_FAILED_READ)
+		Serial.print("Network failed read");
+	else if (reason == lwmqtt_err_t::LWMQTT_NETWORK_FAILED_WRITE)
+		Serial.print("Network failed write");
+	else if (reason == lwmqtt_err_t::LWMQTT_REMAINING_LENGTH_OVERFLOW)
+		Serial.print("Remaining length overflow");
+	else if (reason == lwmqtt_err_t::LWMQTT_REMAINING_LENGTH_MISMATCH)
+		Serial.print("Remaining length mismatch");
+	else if (reason == lwmqtt_err_t::LWMQTT_MISSING_OR_WRONG_PACKET)
+		Serial.print("Missing or wrong packet");
+	else if (reason == lwmqtt_err_t::LWMQTT_CONNECTION_DENIED)
+		Serial.print("Connection denied");
+	else if (reason == lwmqtt_err_t::LWMQTT_FAILED_SUBSCRIPTION)
+		Serial.print("Failed subscription");
+	else if (reason == lwmqtt_err_t::LWMQTT_SUBACK_ARRAY_OVERFLOW)
+		Serial.print("Suback array overflow");
+	else if (reason == lwmqtt_err_t::LWMQTT_PONG_TIMEOUT)
+		Serial.print("Pong timeout");
+}
+
+void lwMQTTErrConnection(lwmqtt_return_code_t reason)
+{
+	if (reason == lwmqtt_return_code_t::LWMQTT_CONNECTION_ACCEPTED)
+		Serial.print("Connection Accepted");
+	else if (reason == lwmqtt_return_code_t::LWMQTT_UNACCEPTABLE_PROTOCOL)
+		Serial.print("Unacceptable Protocol");
+	else if (reason == lwmqtt_return_code_t::LWMQTT_IDENTIFIER_REJECTED)
+		Serial.print("Identifier Rejected");
+	else if (reason == lwmqtt_return_code_t::LWMQTT_SERVER_UNAVAILABLE)
+		Serial.print("Server Unavailable");
+	else if (reason == lwmqtt_return_code_t::LWMQTT_BAD_USERNAME_OR_PASSWORD)
+		Serial.print("Bad UserName/Password");
+	else if (reason == lwmqtt_return_code_t::LWMQTT_NOT_AUTHORIZED)
+		Serial.print("Not Authorized");
+	else if (reason == lwmqtt_return_code_t::LWMQTT_UNKNOWN_RETURN_CODE)
+		Serial.print("Unknown Return Code");
+}
+
+// IoT thing message receved handler
+void messageReceived(String &topic, String &payload)
+{
+	Serial.println("Recieved [" + topic + "]: " + payload);
+}
+
+// Connect to AWS MQTT
+void connectToMqtt(bool nonBlocking = false)
+{
+	Serial.print("MQTT connecting ");
+	while (!client.connected())
+	{
+		// MDNS host name is used as MQTT client name(?)
+		if (client.connect(config.MDNSHost))
+		{
+			Serial.println("connected!");
+			if (!client.subscribe(MQTT_SUB_TOPIC))
+				lwMQTTErr(client.lastError());
+		}
+		else
+		{
+			Serial.print("failed, reason -> ");
+			lwMQTTErrConnection(client.returnCode());
+			if (!nonBlocking)
+			{
+				Serial.println(" < try again in 5 seconds");
+				delay(5000);
+			}
+			else
+			{
+				Serial.println(" <");
+			}
+		}
+		if (nonBlocking) break;
+	}
+}
+
+HTTPClient httpRequest;
+WiFiClient wifiClient;
+
 // Check current power consumption via API
 float getPowerConsumption()
 {
 	if (WiFi.status() == WL_CONNECTED)
 	{
-		HTTPClient httpRequest;
-		httpRequest.begin("http://192.168.1.162:81/API/1.1/consumption/electricity/GetPowerMeterData");
+		httpRequest.begin(wifiClient, "http://192.168.1.162:3001/API/1.2/consumption/electricity/GetPowerMeterData");
 		int httpCode = httpRequest.GET();
 
 		if (httpCode > 0)
 		{
 			StaticJsonDocument<2048> jsonResponce;
+			// Serial.print("GET responce: ");
+			// Serial.println(httpRequest.getString().c_str());
 			deserializeJson(jsonResponce, httpRequest.getString());
 
 			float power = jsonResponce["P"]["sum"];
-			Serial.print("getPowerConsumption: ");
-			Serial.println(power);
+			// Serial.print("getPowerConsumption: ");
+			// Serial.println(power);
 			return power;
 		}
+		else
+		{
+			Serial.printf("[GET failed, error: %s\n", httpRequest.errorToString(httpCode).c_str());
+			return -1;
+		}
+		
 		httpRequest.end();
 	}
 	return -1;
 }
 
-// Post current temperature data to remote API
+// Post temperature update to MQTT topic
 void postTemperature()
 {
-	// Warning: uses global data.
-	ControllerData *gd = &GD;
-
 	if (WL_CONNECTED == WiFi.status())
 	{
-		HTTPClient httpRequest;
-		httpRequest.begin("http://192.168.1.162:81/API/1.1/climate/data/temperature");
-		httpRequest.addHeader("Content-Type", APPLICATION_JSON);
-
-		// Convert 1-wire addresses to char strings
-		DeviceAddress sensor1Address, sensor2Address;
-
-		memset(sensor1Address, 0, sizeof(DeviceAddress));
-		memset(sensor2Address, 0, sizeof(DeviceAddress));
-
-		gd->temperatureSensors->getAddress(0, sensor1Address);
-		gd->temperatureSensors->getAddress(1, sensor2Address);
-
-		DeviceAddressChar sensor1CharAddress, sensor2CharAddress;
-
-		gd->temperatureSensors->deviceAddresToString(sensor1Address, sensor1CharAddress);
-		gd->temperatureSensors->deviceAddresToString(sensor2Address, sensor2CharAddress);
-
-		// Prepare payload by the template: [{ "temperature" : 21.5, "sensorId": "28FF72BF47160342" }]
+		// Prepare payload
 		String temperaturePayload =
-			String("[") +
-			"{ \"temperature\" : " + String(getTemperature(config.heatingChannel[0].sensorAddress), 2) +
-			", \"sensorId\" : \"" + String(sensor1CharAddress) + "\" }" +
-			", " +
-			"{ \"temperature\" : " + String(getTemperature(config.heatingChannel[1].sensorAddress), 2) +
-			", \"sensorId\" : \"" + String(sensor2CharAddress) + "\" }" +
-			"]";
-		
-		// Just fire and forget
-		httpRequest.POST(temperaturePayload);
+			String("{\"state\": { \"reported\": { \"ESP\": {") +
+			"\"hall_floor_1\": " + String(getTemperature(config.heatingChannel[0].sensorAddress), 2) + ", " +
+			"\"hall_floor_2\": " + String(getTemperature(config.heatingChannel[1].sensorAddress), 2) +
+			"}}}}";
+			
+		if (!client.publish(MQTT_PUB_TOPIC, temperaturePayload, false, 0))
+			lwMQTTErr(client.lastError());		
 	}
 }
 
@@ -188,6 +301,7 @@ void temperatureUpdate()
 void controlHeating()
 {
 	float currentPower = getPowerConsumption();
+	Serial.printf("currentPower = %f\n", currentPower);
 
 	float tempDelta[2];
 	tempDelta[0] = config.targetTemp - getTemperature(config.heatingChannel[0].sensorAddress);  
@@ -537,6 +651,16 @@ void setup()
 	gd->thermostatServer->begin();
 	Serial.println("HTTP server started.");
 
+	NTPConnect();
+
+	net.setTrustAnchors(&cert);
+	net.setClientRSACert(&client_crt, &key);
+
+	// (?) client.setKeepAlive(30000);
+	client.begin(MQTT_HOST, MQTT_PORT, net);
+	client.onMessage(messageReceived);
+	connectToMqtt();
+
 	// Set up regulars
 	gd->timer->every(UPDATE_TEMP_EVERY, temperatureUpdate);
 	gd->timer->every(CHECK_HEATING_EVERY, controlHeating);
@@ -556,4 +680,9 @@ void loop()
 	gd->thermostatServer->handleClient();
 	gd->timer->update();
 	WiFiManager::update();
+
+	now = time(nullptr);
+	client.loop();
+	if (!client.connected())
+		connectToMqtt(true);
 }
