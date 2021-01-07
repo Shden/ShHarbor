@@ -507,8 +507,6 @@ String mapConfigParameters(const String& key)
 // Handles HTTP GET & POST /config.html requests
 void HandleConfig()
 {
-	// dbgPostPrintout();
-
 	// Warning: uses global data
 	ControllerData *gd = &GD;
 
@@ -639,7 +637,6 @@ void setup()
 	net.setTrustAnchors(&cert);
 	net.setClientRSACert(&client_crt, &key);
 
-	// client.setKeepAlive(30000);
 	client.setServer(MQTT_HOST, MQTT_PORT);
 	client.setBufferSize(MQTT_BUFFER_SIZE);
 	client.setCallback(messageReceived);
