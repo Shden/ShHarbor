@@ -11,6 +11,7 @@
 	- Built in configuration web UI at /config.
 	- WiFi access point to configure and troubleshoot.
 	- ShWade specific: check total power consumption, power balancing.
+	- AWS IoT integration: temperature reporting and configuration control.
 
 	Toolchain: PlatformIO.
 	Build commands:
@@ -36,26 +37,12 @@
 #include <ESPTemplateProcessor.h>
 #include <ArduinoJson.h>
 #include <ESP8266HttpClient.h>
-
 #include <WiFiClientSecure.h>
 #include <time.h>
 #include <PubSubClient.h>
 #include <MQTT.h>
 #include "secrets.h"
 
-const int MQTT_PORT = 8883;
-const char MQTT_SUB_TOPIC[] = "$aws/things/" THINGNAME "/shadow/update";
-const char MQTT_PUB_TOPIC[] = "$aws/things/" THINGNAME "/shadow/update";
-
-#define MQTT_BUFFER_SIZE	2048
-
-uint8_t DST = 0;
-WiFiClientSecure net;
-PubSubClient client(net);
-
-BearSSL::X509List cert(cacert);
-BearSSL::X509List client_crt(client_cert);
-BearSSL::PrivateKey key(privkey);
 
 #define ONE_WIRE_PIN            5
 
@@ -82,6 +69,19 @@ BearSSL::PrivateKey key(privkey);
 #define TEXT_HTML		"text/html"
 #define TEXT_PLAIN		"text/plain"
 #define APPLICATION_JSON	"application/json"
+#define MQTT_BUFFER_SIZE	2048
+
+const int MQTT_PORT = 8883;
+const char MQTT_SUB_TOPIC[] = "$aws/things/" THINGNAME "/shadow/update";
+const char MQTT_PUB_TOPIC[] = "$aws/things/" THINGNAME "/shadow/update";
+
+uint8_t DST = 0;
+WiFiClientSecure net;
+PubSubClient client(net);
+
+BearSSL::X509List cert(cacert);
+BearSSL::X509List client_crt(client_cert);
+BearSSL::PrivateKey key(privkey);
 
 typedef char DeviceAddressChar[ONE_WIRE_ADDR_LEN + 1];
 
@@ -118,7 +118,6 @@ struct ConfigurationData : ConnectedESPConfiguration
 	HeatingChannel		heatingChannel[2];
 } config;
 
-unsigned long lastMillis = 0;
 time_t now;
 time_t nowish = 1510592825;
 
@@ -144,7 +143,7 @@ void NTPConnect(void)
 void messageReceived(char *topic, byte *payload, unsigned int length)
 {
 	Serial.printf("Received [%s]\n", topic);
-	for (int i = 0; i < length; i++)
+	for (uint i = 0; i < length; i++)
 		Serial.print((char)payload[i]);
 	Serial.println();
 
@@ -284,7 +283,6 @@ void postTemperature()
 			"}}}}";
 			
 		if (!client.publish(MQTT_PUB_TOPIC, temperaturePayload.c_str(), false))
-			// lwMQTTErr(client.lastError());
 			pubSubErr(client.state());		
 	}
 }
@@ -506,21 +504,6 @@ String mapConfigParameters(const String& key)
 	return "Mapping value undefined.";
 }
 
-// // Debug request arguments printout.
-// void dbgPostPrintout()
-// {
-// 	// Warning: uses global data
-// 	ControllerData *gd = &GD;
-//
-// 	for (int i=0; i < gd->thermostatServer->args(); i++)
-// 	{
-// 		Serial.print(gd->thermostatServer->argName(i));
-// 		Serial.print(": ");
-// 		Serial.print(gd->thermostatServer->arg(i));
-// 		Serial.println();
-// 	}
-// }
-
 // Handles HTTP GET & POST /config.html requests
 void HandleConfig()
 {
@@ -605,19 +588,6 @@ void checkSoftwareUpdates()
 {
 	updateAll(FW_VERSION, getFWCurrentVersion(), config.OTA_URL);
 }
-
-// void refresh1WireSensorAddresses()
-// {
-// 	// Warning: uses global data
-// 	ControllerData *gd = &GD;
-
-// 	for (uint8_t sensorIndex = 0; sensorIndex < 2; sensorIndex++)
-// 	{
-// 		gd->temperatureSensors->getAddress(sensorIndex, gd->sensorAddress[sensorIndex]);
-// 		gd->sensorAddress[sensorIndex][ONE_WIRE_ADDR_LEN] = '\0';
-// 		Serial.printf("Sensor %d at %s\n\r", sensorIndex, gd->sensorAddress[sensorIndex]);
-// 	}
-// }
 
 void setup()
 {
