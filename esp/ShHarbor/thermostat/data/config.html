@@ -27,9 +27,8 @@
 						<label for="mDNS">mDNS Name</label>
 						<input type="text" class="form-control" name="MDNS" value="%MDNS%" placeholder="mDNS Name">
 					</div>
-					<br>
 					<div class="form-row">
-						<div class="form-check col-sm-6">
+						<!--div class="form-check col-sm-6">
 							<div class="form-check">
 									<input class="form-check-input" type="checkbox" %STATIC_IP% name="ACTIVE">
 									<label class="form-check-label" for="active">
@@ -37,11 +36,12 @@
 									</label>
 
 							</div>
-						</div>
+						</div-->
 
 						<div class="form-group col-sm-6">
 							<label>Device IP:</label>
-							<div class="form-row">
+							<input type="text" class="form-control" name="IP" value="%IP%" placeholder="Device IP">
+							<!--div class="form-row">
 								<div class="col-sm-12">
 									<div class="form-group">
 										<div class="input-group">
@@ -52,11 +52,11 @@
 										</div>
 									</div>
 								</div>
-							</div>
+							</div-->
 						</div>
 
 					</div>
-					<div class="form-row">
+					<!--div class="form-row">
 						<div class="form-group col-sm-6">
 							<label>Gateway IP:</label>
 							<div class="form-row">
@@ -87,7 +87,7 @@
 								</div>
 							</div>
 						</div>
-					</div>
+					</div-->
 					<button type="submit" name="NETWORK_UPDATE" class="btn btn-warning">Update network and reconnect</button>
 					<button type="submit" name="REBOOT" class="btn btn-danger">Reboot</button>
 				</form>
@@ -107,13 +107,21 @@
 						<label for="DS1820ID">DS1820 ID</label>
 						<input type="text" class="form-control" name="DS1820ID" value="%DS1820ID%" readonly>
 					</div>
+					<div class="form-group col-sm-6">
+						<label for="HEATING_STATUS">Heating status</label>
+						<input type="text" class="form-control" name="HEATING_STATUS" value="%HEATING_STATUS%" readonly>
+					</div>
+					<div class="form-group col-sm-6">
+						<label for="VERSION">Firmware version</label>
+						<input type="text" class="form-control" name="VERSION" value="%VERSION%" readonly>
+					</div>
 				</div>
 				<br>
 				<h1>General settings</h1>
 				<hr>
 				<form method="POST">
 					<div class="form-group">
-						<label for="temperature">Target temperature</label>
+						<label for="T_TEMP">Target temperature</label>
 						<div class="input-group mb-3">
 							<input type="number" step="0.1" class="form-control" name="T_TEMP" value="%T_TEMP%" placeholder="Target temperature">
 							<div class="input-group-append">

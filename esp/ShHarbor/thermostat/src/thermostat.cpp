@@ -1,23 +1,26 @@
 /*
-	Home: ShHarbor.
-
-	Thermostat module based on ESP8266 SoC.
-
-	Features:
-	- DS1820 temperature control sensor.
-	- AC 220V power control.
-	- REST API to monitor/contol heating parameters.
-	- OTA firmware update.
-	- Built in configuration web UI at /config.
-	- WiFi access point to configure and troubleshoot.
-
-	Toolchain: PlatformIO.
-
-	By denis.afanassiev@gmail.com
-
-	API:
-	curl 192.168.1.15/Status
-*/
+ *	Home: ShHarbor.
+ *
+ *	Thermostat module based on ESP8266 SoC.
+ *
+ *	Features:
+ *	- DS1820 temperature control sensor.
+ *	- AC 220V valve control.
+ *	- REST API to monitor/contol heating parameters.
+ *	- OTA firmware update.
+ *	- Built in configuration web UI at /config.
+ *	- WiFi access point to configure and troubleshoot.
+ *
+ *	Toolchain: PlatformIO.
+ *	Build commands:
+ *	  pio run 		# for firmware
+ *	  pio run -t buildfs	# for spiffs
+ *
+ *	By denis.afanassiev@gmail.com
+ *
+ *	REST API:
+ *	curl <IP address>/status
+ */
 
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
@@ -30,6 +33,13 @@
 #include <ConnectedESPConfiguration.h>
 #include <WiFiManager.h>
 #include <ESPTemplateProcessor.h>
+#include <ArduinoJson.h>
+#include <ESP8266HttpClient.h>
+#include <WiFiClientSecure.h>
+#include <time.h>
+#include <PubSubClient.h>
+#include <MQTT.h>
+#include "secrets.h"
 
 #define ONE_WIRE_PIN            5
 #define AC_CONTROL_PIN          13
@@ -37,6 +47,7 @@
 #define UPDATE_TEMP_EVERY       (5000L)         // every 5 sec
 #define CHECK_HEATING_EVERY     (15000L)        // every 15 sec
 #define CHECK_SW_UPDATES_EVERY	(60000L*5)	// every 5 min
+#define POST_TEMPERATURE_EVERY	(60000L*5)	// every 5 min
 #define DEFAULT_TARGET_TEMP	28.0
 #define DEFAULT_ACTIVE		0
 #define OTA_URL_LEN		80
@@ -45,8 +56,22 @@
 #define TEXT_HTML		"text/html"
 #define TEXT_PLAIN		"text/plain"
 #define APPLICATION_JSON	"application/json"
+#define MQTT_BUFFER_SIZE	2048
+
+const int MQTT_PORT = 8883;
+const char MQTT_SUB_TOPIC[] = "$aws/things/" THINGNAME "/shadow/update";
+const char MQTT_PUB_TOPIC[] = "$aws/things/" THINGNAME "/shadow/update";
+
+uint8_t DST = 0;
+WiFiClientSecure net;
+PubSubClient client(net);
+
+BearSSL::X509List cert(cacert);
+BearSSL::X509List client_crt(client_cert);
+BearSSL::PrivateKey key(privkey);
 
 void checkSoftwareUpdates();
+float getTemperature();
 
 struct ControllerData
 {
@@ -68,6 +93,152 @@ struct ConfigurationData : ConnectedESPConfiguration
 	int8_t			active;
 	char			OTA_URL[OTA_URL_LEN + 1];
 } config;
+
+time_t now;
+time_t nowish = 1510592825;
+
+void NTPConnect(void)
+{
+	Serial.print("Setting time using SNTP");
+	configTime(TIME_ZONE * 3600, DST * 3600, "pool.ntp.org", "time.nist.gov");
+	now = time(nullptr);
+	while (now < nowish)
+	{
+		delay(500);
+		Serial.print(".");
+		now = time(nullptr);
+	}
+	Serial.println("done!");
+	struct tm timeinfo;
+	gmtime_r(&now, &timeinfo);
+	Serial.print("Current time: ");
+	Serial.print(asctime(&timeinfo));
+}
+
+// IoT thing shadow messages recever
+void messageReceived(char *topic, byte *payload, unsigned int length)
+{
+	Serial.printf("Received [%s]\n", topic);
+	for (uint i = 0; i < length; i++)
+		Serial.print((char)payload[i]);
+	Serial.println();
+
+	DynamicJsonDocument jsonMessage(4096);
+	DeserializationError error = deserializeJson(jsonMessage, (char*)payload);
+	
+	// Test if parsing succeeded
+	if (error)
+	{
+		Serial.print("deserializeJson() failed: ");
+		Serial.println(error.c_str());
+		return;
+	}
+
+	// JsonVariant houseMode = 
+	// 	jsonMessage["state"]["reported"]["config"]["mode"];
+	// JsonVariant house1FloorTemp = 
+	// 	jsonMessage["state"]["reported"]["config"]["heating"]["house1FloorTemp"];
+
+	// if (houseMode && house1FloorTemp)
+	// {
+	// 	float temp = house1FloorTemp.as<float>();
+	// 	int active = (houseMode.as<String>() == "presence") ? 1 : 0;
+
+	// 	Serial.println("Configuration info received:");
+	// 	Serial.printf("Thermostat is active: %d\n", active);
+	// 	Serial.printf("Thermostat setpoint: %f\n", temp);
+
+	// 	if (config.targetTemp != temp || config.active != active)
+	// 	{
+	// 		Serial.println("Configuration will be updated...");
+	// 		config.targetTemp = temp;
+	// 		config.active = active;
+	// 		saveConfiguration(&config, sizeof(ConfigurationData));
+	// 		Serial.println("Configuration updated.");
+	// 	}
+	// }
+}
+
+// MQTT errors printing
+void pubSubErr(int8_t MQTTErr)
+{
+	if (MQTTErr == MQTT_CONNECTION_TIMEOUT)
+		Serial.print("Connection timeout");
+	else if (MQTTErr == MQTT_CONNECTION_LOST)
+		Serial.print("Connection lost");
+	else if (MQTTErr == MQTT_CONNECT_FAILED)
+		Serial.print("Connect failed");
+	else if (MQTTErr == MQTT_DISCONNECTED)
+		Serial.print("Disconnected");
+	else if (MQTTErr == MQTT_CONNECTED)
+		Serial.print("Connected");
+	else if (MQTTErr == MQTT_CONNECT_BAD_PROTOCOL)
+		Serial.print("Connect bad protocol");
+	else if (MQTTErr == MQTT_CONNECT_BAD_CLIENT_ID)
+		Serial.print("Connect bad Client-ID");
+	else if (MQTTErr == MQTT_CONNECT_UNAVAILABLE)
+		Serial.print("Connect unavailable");
+	else if (MQTTErr == MQTT_CONNECT_BAD_CREDENTIALS)
+		Serial.print("Connect bad credentials");
+	else if (MQTTErr == MQTT_CONNECT_UNAUTHORIZED)
+		Serial.print("Connect unauthorized");
+}
+
+// Connect to AWS MQTT
+void connectToMqtt(bool nonBlocking = false)
+{
+	Serial.print("MQTT connecting... ");
+	while (!client.connected())
+	{
+		// MDNS host name is used as MQTT client name(?)
+		if (client.connect(config.MDNSHost))
+		{
+			Serial.println("done!");
+			if (!client.subscribe(MQTT_SUB_TOPIC))
+				// lwMQTTErr(client.lastError());
+				pubSubErr(client.state());
+		}
+		else
+		{
+			Serial.print("failed, reason -> ");
+			pubSubErr(client.state());
+			// lwMQTTErrConnection(client.returnCode());
+			if (!nonBlocking)
+			{
+				Serial.println(" < try again in 5 seconds");
+				delay(5000);
+			}
+			else
+			{
+				Serial.println(" <");
+			}
+		}
+		if (nonBlocking) break;
+	}
+}
+
+HTTPClient httpRequest;
+WiFiClient wifiClient;
+
+
+// Post temperature update to MQTT topic
+void postTemperature()
+{
+	if (WL_CONNECTED == WiFi.status())
+	{
+		// Prepare payload
+		String temperaturePayload =
+			String("{\"state\": { \"reported\": { \"heating\": {") +
+			"\"" + String(config.MDNSHost) + "\": " + String(getTemperature(), 2) +
+			"}}}}";
+
+		Serial.print("Posting temperature update: ");
+		Serial.println(temperaturePayload);
+			
+		if (!client.publish(MQTT_PUB_TOPIC, temperaturePayload.c_str(), false))
+			pubSubErr(client.state());		
+	}
+}
 
 // Go to sensor and get current temperature.
 float getTemperature()
@@ -144,6 +315,9 @@ void HandleHTTPTargetTemperature()
 }
 
 // HTTP PUT /Active
+// to test:
+//	$ curl -X PUT -d 'active=0' 192.168.1.120/Active
+//	$ curl -X PUT -d 'active=1' 192.168.1.120/Active
 void HandleHTTPActive()
 {
 	// Warning: uses global data
@@ -165,6 +339,20 @@ void HandleHTTPActive()
 	}
 }
 
+// Get the current version of the firmware (from SPIFFS file)
+int getFWCurrentVersion()
+{
+	int spiffsVersion = -1;
+	File versionInfo = SPIFFS.open("/version.info", "r");
+	if (versionInfo)
+	{
+		spiffsVersion = versionInfo.parseInt();
+		versionInfo.close();
+	}
+
+	return spiffsVersion;
+}
+
 // Maps config.html parameters to configuration values.
 String mapConfigParameters(const String& key)
 {
@@ -177,32 +365,17 @@ String mapConfigParameters(const String& key)
 	if (key == "IP") return WiFi.localIP().toString(); else
 	if (key == "BUILD") return String(FW_VERSION); else
 	if (key == "DS1820ID") return String(gd->sensorAddress); else
+	if (key == "HEATING_STATUS") return (gd->heatingOn) ? "On" :  "Off"; else
+	if (key == "VERSION") return (String(getFWCurrentVersion())); else
 	if (key == "T_TEMP") return String(config.targetTemp); else
 	if (key == "CHECKED") return config.active ? "checked" : ""; else
 	if (key == "OTA_URL") return String(config.OTA_URL); else
 	return "Mapping value undefined.";
 }
 
-// // Debug request arguments printout.
-// void dbgPostPrintout()
-// {
-// 	// Warning: uses global data
-// 	ControllerData *gd = &GD;
-//
-// 	for (int i=0; i < gd->thermostatServer->args(); i++)
-// 	{
-// 		Serial.print(gd->thermostatServer->argName(i));
-// 		Serial.print(": ");
-// 		Serial.print(gd->thermostatServer->arg(i));
-// 		Serial.println();
-// 	}
-// }
-
 // Handles HTTP GET & POST /config.html requests
 void HandleConfig()
 {
-	// dbgPostPrintout();
-
 	// Warning: uses global data
 	ControllerData *gd = &GD;
 
@@ -261,15 +434,7 @@ void HandleConfig()
 // Go check if there is a new firmware or SPIFFS got available.
 void checkSoftwareUpdates()
 {
-	int spiffsVersion = 0;
-	File versionInfo = SPIFFS.open("/version.info", "r");
-	if (versionInfo)
-	{
-		spiffsVersion = versionInfo.parseInt();
-		versionInfo.close();
-	}
-
-	updateAll(FW_VERSION, spiffsVersion, config.OTA_URL);
+	updateAll(FW_VERSION, getFWCurrentVersion(), config.OTA_URL);
 }
 
 void setup()
@@ -318,12 +483,24 @@ void setup()
 	gd->thermostatServer->begin();
 	Serial.println("HTTP server started.");
 
+	NTPConnect();
+
+	net.setTrustAnchors(&cert);
+	net.setClientRSACert(&client_crt, &key);
+
+	client.setServer(MQTT_HOST, MQTT_PORT);
+	client.setBufferSize(MQTT_BUFFER_SIZE);
+	client.setCallback(messageReceived);
+	connectToMqtt();
+
 	// Set up regulars
 	gd->timer->every(UPDATE_TEMP_EVERY, temperatureUpdate);
 	gd->timer->every(CHECK_HEATING_EVERY, controlHeating);
 	gd->timer->every(CHECK_SW_UPDATES_EVERY, checkSoftwareUpdates);
+	gd->timer->every(POST_TEMPERATURE_EVERY, postTemperature);
 
 	pinMode(AC_CONTROL_PIN, OUTPUT);
+	digitalWrite(AC_CONTROL_PIN, LOW);
 }
 
 void loop()
@@ -333,4 +510,12 @@ void loop()
 	gd->thermostatServer->handleClient();
 	gd->timer->update();
 	WiFiManager::update();
+
+	if (WL_CONNECTED == WiFi.status())
+	{
+		client.loop();
+
+		if (!client.connected())
+			connectToMqtt(true);
+	}
 }
